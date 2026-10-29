@@ -75,6 +75,13 @@ cd pneuma-seeker-ui
 npm run dev
 ```
 
+# Datasets
+
+- **MIMIC-III v1.4** (credentialed clinical data): preparation, data quality checks and schema profile are
+  described in [docs/mimic3/README.md](./docs/mimic3/README.md); how the preparation package works and how
+  to set it up for another dataset in
+  [src/pneuma_seeker/services/core/data_prep/README.md](./src/pneuma_seeker/services/core/data_prep/README.md).
+
 # Next Steps
 Before asking questions on a dataset, you need to index it using the `/index` endpoint in the backend (see [indexing.py](src/pneuma_seeker/routers/indexing.py)).
 

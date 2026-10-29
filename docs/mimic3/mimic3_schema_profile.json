@@ -1,0 +1,3449 @@
+{
+  "report": "mimic3_schema_profile.json",
+  "about": "Shared schema profile: every table and column with its meaning, role, missing values, common values, links and applicable query conventions. Read by the query system.",
+  "maintenance": "Shared snapshot: regenerate only with `python scripts/prepare_mimic3.py publish` (dataset maintainer); do not edit by hand.",
+  "small_count_rule": "Counts from 1 to 10 are written as \"<11\" and their percentage as null; category values seen in fewer than 11 rows are omitted.",
+  "data_fingerprint": {
+    "id": "55cb7586f72a",
+    "row_counts": {
+      "admissions": 58976,
+      "callout": 34499,
+      "caregivers": 7567,
+      "cptevents": 573146,
+      "d_cpt": 134,
+      "d_icd_diagnoses": 14567,
+      "d_icd_procedures": 3882,
+      "d_items": 12487,
+      "d_labitems": 753,
+      "datetimeevents": 4485937,
+      "diagnoses_icd": 651047,
+      "drgcodes": 125557,
+      "icustays": 61532,
+      "inputevents_cv": 17527935,
+      "microbiologyevents": 631726,
+      "patients": 46520,
+      "prescriptions": 4156450,
+      "procedureevents_mv": 258066,
+      "procedures_icd": 240095,
+      "services": 73343,
+      "transfers": 261897
+    }
+  },
+  "role_meanings": {
+    "row_number": "Row number within the table; not an identifier, never join on it",
+    "identifier": "Identifies one record of this table (its key)",
+    "reference": "Points to a record in another table (see 'references')",
+    "code": "A code from a coding system (ICD-9, CPT, DRG, NDC, ...), stored as text",
+    "local_identifier": "An identifier with no table of its own in this dataset (e.g. ward, order)",
+    "time": "Date or date-time (shifted into the future per patient; intervals are real)",
+    "flag": "Yes/no indicator (usually 0/1)",
+    "category": "One of a small set of values (listed under 'values')",
+    "number": "A measured or counted quantity",
+    "text": "Free or semi-free text; match with patterns (ILIKE), not exact values",
+    "always_null": "Always empty in this dataset; do not filter or group on it"
+  },
+  "key_hierarchy": "subject_id (patient) > hadm_id (hospital admission) > icustay_id (ICU stay): each ICU stay belongs to one admission and each admission to one patient. Join on the most specific identifier both tables share.",
+  "tables": {
+    "admissions": {
+      "description": "One row per hospital admission: admission and discharge times, admission type and location, insurance, demographics, admitting diagnosis text, and in-hospital death.",
+      "kind": "core",
+      "rows": 58976,
+      "key": [
+        "hadm_id"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 54323
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "Hospital admission identifier (unique per row)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608
+        },
+        "admittime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Admission time (shifted)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 67002,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "dischtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Discharge time (shifted)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 62767,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "deathtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time of in-hospital death; null if the patient did not die in hospital",
+          "missing_pct": 90.074,
+          "distinct_values_approx": 7972,
+          "conventions": [
+            "temporal.admissions.deathtime_outside_stay"
+          ]
+        },
+        "admission_type": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "One of 'ELECTIVE', 'URGENT', 'EMERGENCY', 'NEWBORN'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4,
+          "values": {
+            "EMERGENCY": 42071,
+            "NEWBORN": 7863,
+            "ELECTIVE": 7706,
+            "URGENT": 1336
+          },
+          "values_truncated": false,
+          "conventions": [
+            "dist.admissions.admission_type"
+          ]
+        },
+        "admission_location": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Where the patient was admitted from, e.g. 'EMERGENCY ROOM ADMIT', 'PHYS REFERRAL/NORMAL DELI', 'TRANSFER FROM HOSP/EXTRAM', 'CLINIC REFERRAL/PREMATURE'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 9,
+          "values": {
+            "EMERGENCY ROOM ADMIT": 22754,
+            "PHYS REFERRAL/NORMAL DELI": 15079,
+            "CLINIC REFERRAL/PREMATURE": 12032,
+            "TRANSFER FROM HOSP/EXTRAM": 8456,
+            "TRANSFER FROM SKILLED NUR": 273,
+            "** INFO NOT AVAILABLE **": 204,
+            "HMO REFERRAL/SICK": 102,
+            "TRANSFER FROM OTHER HEALT": 71
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "discharge_location": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Where the patient went after discharge, e.g. 'HOME', 'HOME HEALTH CARE', 'SNF', 'REHAB/DISTINCT PART HOSP', 'DEAD/EXPIRED'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 17,
+          "values": {
+            "HOME": 18962,
+            "HOME HEALTH CARE": 13963,
+            "SNF": 7705,
+            "REHAB/DISTINCT PART HOSP": 6429,
+            "DEAD/EXPIRED": 5854,
+            "LONG TERM CARE HOSPITAL": 2305,
+            "SHORT TERM HOSPITAL": 1534,
+            "DISC-TRAN CANCER/CHLDRN H": 669,
+            "DISCH-TRAN TO PSYCH HOSP": 446,
+            "HOSPICE-HOME": 402,
+            "LEFT AGAINST MEDICAL ADVI": 365,
+            "HOSPICE-MEDICAL FACILITY": 153,
+            "HOME WITH HOME IV PROVIDR": 67,
+            "OTHER FACILITY": 63,
+            "ICF": 47,
+            "DISC-TRAN TO FEDERAL HC": 11
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "insurance": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "One of 'Medicare', 'Private', 'Medicaid', 'Government', 'Self Pay'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 5,
+          "values": {
+            "Medicare": 28215,
+            "Private": 22582,
+            "Medicaid": 5785,
+            "Government": 1783,
+            "Self Pay": 611
+          },
+          "values_truncated": false
+        },
+        "language": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Preferred language, 4-letter uppercase abbreviations such as 'ENGL', 'SPAN'; often null",
+          "missing_pct": 42.953,
+          "distinct_values_approx": 73
+        },
+        "religion": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Religion, uppercase free text, e.g. 'CATHOLIC', 'NOT SPECIFIED'",
+          "missing_pct": 0.777,
+          "distinct_values_approx": 21,
+          "values": {
+            "CATHOLIC": 20606,
+            "NOT SPECIFIED": 11753,
+            "UNOBTAINABLE": 8269,
+            "PROTESTANT QUAKER": 7134,
+            "JEWISH": 5314,
+            "OTHER": 2696,
+            "EPISCOPALIAN": 774,
+            "GREEK ORTHODOX": 459,
+            "CHRISTIAN SCIENTIST": 429,
+            "BUDDHIST": 267,
+            "MUSLIM": 225,
+            "JEHOVAH'S WITNESS": 139,
+            "UNITARIAN-UNIVERSALIST": 124,
+            "HINDU": 113,
+            "ROMANIAN EAST. ORTH": 83,
+            "7TH DAY ADVENTIST": 81,
+            "BAPTIST": 28,
+            "HEBREW": 16
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 2
+        },
+        "marital_status": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Uppercase, e.g. 'MARRIED', 'SINGLE', 'WIDOWED', 'DIVORCED', 'SEPARATED'",
+          "missing_pct": 17.173,
+          "distinct_values_approx": 7,
+          "values": {
+            "MARRIED": 24239,
+            "SINGLE": 13254,
+            "WIDOWED": 7211,
+            "DIVORCED": 3213,
+            "SEPARATED": 571,
+            "UNKNOWN (DEFAULT)": 345,
+            "LIFE PARTNER": 15
+          },
+          "values_truncated": false
+        },
+        "ethnicity": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Uppercase free text with subgroups, e.g. 'WHITE', 'BLACK/AFRICAN AMERICAN', 'HISPANIC OR LATINO', 'ASIAN - CHINESE', 'UNKNOWN/NOT SPECIFIED'; use prefix patterns such as 'ASIAN%' for groups",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 39,
+          "values": {
+            "WHITE": 40996,
+            "BLACK/AFRICAN AMERICAN": 5440,
+            "UNKNOWN/NOT SPECIFIED": 4523,
+            "HISPANIC OR LATINO": 1696,
+            "OTHER": 1512,
+            "ASIAN": 1509,
+            "UNABLE TO OBTAIN": 814,
+            "PATIENT DECLINED TO ANSWER": 559,
+            "ASIAN - CHINESE": 277,
+            "HISPANIC/LATINO - PUERTO RICAN": 232,
+            "BLACK/CAPE VERDEAN": 200,
+            "WHITE - RUSSIAN": 164,
+            "MULTI RACE ETHNICITY": 130,
+            "BLACK/HAITIAN": 101,
+            "ASIAN - ASIAN INDIAN": 85,
+            "WHITE - OTHER EUROPEAN": 81,
+            "HISPANIC/LATINO - DOMINICAN": 78,
+            "PORTUGUESE": 61,
+            "WHITE - BRAZILIAN": 59,
+            "ASIAN - VIETNAMESE": 53,
+            "AMERICAN INDIAN/ALASKA NATIVE": 51,
+            "BLACK/AFRICAN": 44,
+            "MIDDLE EASTERN": 43,
+            "HISPANIC/LATINO - GUATEMALAN": 40,
+            "ASIAN - FILIPINO": 25,
+            "WHITE - EASTERN EUROPEAN": 25,
+            "HISPANIC/LATINO - CUBAN": 24,
+            "HISPANIC/LATINO - SALVADORAN": 19,
+            "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER": 18,
+            "ASIAN - CAMBODIAN": 17,
+            "ASIAN - OTHER": 17,
+            "ASIAN - KOREAN": 13,
+            "HISPANIC/LATINO - CENTRAL AMERICAN (OTHER)": 13,
+            "HISPANIC/LATINO - MEXICAN": 13
+          },
+          "values_truncated": true,
+          "rare_values_omitted": 6
+        },
+        "edregtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time registered in the emergency department",
+          "missing_pct": 47.645,
+          "distinct_values_approx": 34820,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "edouttime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time left the emergency department",
+          "missing_pct": 47.645,
+          "distinct_values_approx": 25249,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "diagnosis": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Free-text preliminary admitting diagnosis (uppercase), not coded; use diagnoses_icd for coded diagnoses",
+          "missing_pct": 0.042,
+          "distinct_values_approx": 17142,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "hospital_expire_flag": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if the patient died during this admission, else 0",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 53122,
+            "1": 5854
+          },
+          "values_truncated": false,
+          "conventions": [
+            "temporal.admissions.deathtime_outside_stay"
+          ]
+        },
+        "has_chartevents_data": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if the admission has ICU charted data",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "1": 57384,
+            "0": 1592
+          },
+          "values_truncated": false
+        }
+      }
+    },
+    "callout": {
+      "description": "ICU discharge planning: requests to move a patient out of the ICU ('call outs') and their outcomes.",
+      "kind": "event",
+      "rows": 34499,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 31974
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 21382,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 27864,
+          "references": "admissions.hadm_id"
+        },
+        "submit_wardid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Ward that submitted the request",
+          "missing_pct": null,
+          "distinct_values_approx": 10,
+          "missing_note": "<11 rows missing"
+        },
+        "submit_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "ICU that submitted the request",
+          "missing_pct": 85.153,
+          "distinct_values_approx": 5,
+          "values": {
+            "MICU": 2263,
+            "SICU": 859,
+            "CSRU": 770,
+            "CCU": 660,
+            "TSICU": 570
+          },
+          "values_truncated": false
+        },
+        "curr_wardid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Current ward",
+          "missing_pct": null,
+          "distinct_values_approx": 32,
+          "missing_note": "<11 rows missing"
+        },
+        "curr_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Current ICU type",
+          "missing_pct": null,
+          "distinct_values_approx": 5,
+          "values": {
+            "MICU": 14015,
+            "SICU": 6647,
+            "CSRU": 5532,
+            "TSICU": 4238,
+            "CCU": 4066
+          },
+          "values_truncated": false,
+          "missing_note": "<11 rows missing"
+        },
+        "callout_wardid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Ward requested (1 = first available)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 34
+        },
+        "callout_service": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Service the patient is called out to",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 22,
+          "values": {
+            "MED": 13791,
+            "CSURG": 4782,
+            "CCU": 2993,
+            "SURG": 2902,
+            "NSURG": 2234,
+            "TRAUM": 1840,
+            "NMED": 1659,
+            "OMED": 1368,
+            "TSURG": 789,
+            "CMED": 760,
+            "VSURG": 526,
+            "ORTHO": 424,
+            "GYN": 112,
+            "GU": 106,
+            "PSURG": 78,
+            "ENT": 76,
+            "OBS": 41
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 4
+        },
+        "request_tele": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if telemetry requested",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "1": 19220,
+            "0": 15279
+          },
+          "values_truncated": false
+        },
+        "request_resp": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if respiratory care requested",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 34208,
+            "1": 291
+          },
+          "values_truncated": false
+        },
+        "request_cdiff": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if C. difficile precautions requested",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 33485,
+            "1": 1014
+          },
+          "values_truncated": false
+        },
+        "request_mrsa": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if MRSA precautions requested",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 31163,
+            "1": 3336
+          },
+          "values_truncated": false
+        },
+        "request_vre": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "1 if VRE precautions requested",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 33104,
+            "1": 1395
+          },
+          "values_truncated": false
+        },
+        "callout_status": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Request status, e.g. 'Inactive'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1,
+          "values": {
+            "Inactive": 34499
+          },
+          "values_truncated": false
+        },
+        "callout_outcome": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'Discharged' or 'Cancelled'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "Discharged": 29965,
+            "Cancelled": 4534
+          },
+          "values_truncated": false
+        },
+        "discharge_wardid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Ward the patient was discharged to",
+          "missing_pct": 13.137,
+          "distinct_values_approx": 26
+        },
+        "acknowledge_status": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Acknowledgement status",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4,
+          "values": {
+            "Acknowledged": 32707,
+            "Unacknowledged": 1083,
+            "Revised": 657,
+            "Reactivated": 52
+          },
+          "values_truncated": false
+        },
+        "createtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Request created",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 42343,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "updatetime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Request updated",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 41322
+        },
+        "acknowledgetime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Request acknowledged",
+          "missing_pct": 5.194,
+          "distinct_values_approx": 36767
+        },
+        "outcometime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Outcome time",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40257
+        },
+        "firstreservationtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "First bed reservation",
+          "missing_pct": 55.767,
+          "distinct_values_approx": 16640
+        },
+        "currentreservationtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Current bed reservation",
+          "missing_pct": 96.626,
+          "distinct_values_approx": 1337
+        }
+      }
+    },
+    "caregivers": {
+      "description": "Caregivers who documented data (cgid), with their role; no clinical content.",
+      "kind": "dictionary",
+      "rows": 7567,
+      "key": [
+        "cgid"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 6841
+        },
+        "cgid": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "Caregiver identifier (joins cgid in the ICU event tables)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 6837
+        },
+        "label": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Role abbreviation, e.g. 'RN', 'MD'",
+          "missing_pct": 0.608,
+          "distinct_values_approx": 261
+        },
+        "description": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Role description, e.g. 'RN', 'Resident/Fellow/PA/NP'",
+          "missing_pct": 31.875,
+          "distinct_values_approx": 15,
+          "values": {
+            "Read Only": 1954,
+            "Resident/Fellow/PA/NP": 1546,
+            "RN": 600,
+            "Attending": 189,
+            "Rehabilitation": 173,
+            "PCT/NA": 121,
+            "Respiratory": 121,
+            "Pharmacist": 85,
+            "Dietitian": 82,
+            "Social Worker": 71,
+            "UCO": 71,
+            "Case Manager": 70,
+            "Administrator": 28,
+            "Pastoral Care": 23,
+            "Research Assistant": 11
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        }
+      }
+    },
+    "cptevents": {
+      "description": "Current Procedural Terminology (CPT) codes billed for ICU and respiratory services; billing-oriented, mostly professional services.",
+      "kind": "event",
+      "rows": 573146,
+      "key": [],
+      "table_conventions": [
+        "quirk.cptevents.without_icu_stay"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 663561
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 27917,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 45742,
+          "references": "admissions.hadm_id"
+        },
+        "costcenter": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'ICU' or 'Resp' (respiratory)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "ICU": 471601,
+            "Resp": 101545
+          },
+          "values_truncated": false
+        },
+        "chartdate": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of the service (often null)",
+          "missing_pct": 82.283,
+          "distinct_values_approx": 29466
+        },
+        "cpt_cd": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "CPT code as text, e.g. '99291' (critical care, first hour)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2374
+        },
+        "cpt_number": {
+          "type": "INTEGER",
+          "role": "code",
+          "description": "Numeric part of the CPT code",
+          "missing_pct": 0.003,
+          "distinct_values_approx": 2128
+        },
+        "cpt_suffix": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Letter suffix of the CPT code",
+          "missing_pct": 99.996,
+          "distinct_values_approx": 1,
+          "values": {
+            "T": 22
+          },
+          "values_truncated": false
+        },
+        "ticket_id_seq": {
+          "type": "INTEGER",
+          "role": "number",
+          "description": "Order of codes on the billing ticket",
+          "missing_pct": 17.717,
+          "distinct_values_approx": 990
+        },
+        "sectionheader": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "CPT section, e.g. 'Evaluation and management'",
+          "missing_pct": 0.004,
+          "distinct_values_approx": 6,
+          "values": {
+            "Evaluation and management": 404388,
+            "Medicine": 114194,
+            "Surgery": 50807,
+            "Radiology": 2974,
+            "Anesthesia": 687,
+            "Pathology and laboratory": 53,
+            "Emerging technology": 22
+          },
+          "values_truncated": false
+        },
+        "subsectionheader": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "CPT subsection",
+          "missing_pct": 0.004,
+          "distinct_values_approx": 51,
+          "values": {
+            "Hospital inpatient services": 268296,
+            "Critical care services": 106469,
+            "Pulmonary": 101563,
+            "Consultations": 25925,
+            "Cardiovascular system": 21485,
+            "Respiratory system": 10516,
+            "Dialysis": 9778,
+            "Musculoskeletal system": 6275,
+            "Digestive system": 4979,
+            "Nervous system": 3662,
+            "Follow-up inpatient consultations (deleted codes)": 2129,
+            "Diagnostic ultrasound": 2118,
+            "Integumentary system": 1776,
+            "Prolonged services": 1052,
+            "Cardiovascular": 882,
+            "Diagnostic imaging": 766,
+            "Other procedures": 571,
+            "Hemic and lymphatic systems": 554,
+            "Physical medicine and rehabilitation": 482,
+            "Special services, procedures and reports": 464,
+            "Urinary system": 455,
+            "Operating microscope (deleted code)": 435,
+            "Noninvasive vascular diagnostic studies": 409,
+            "Psychiatry": 407,
+            "Male genital system": 304,
+            "Hospital observation services": 189,
+            "Case management services": 163,
+            "Female genital system": 142,
+            "Mediastinum and diaphragm": 126,
+            "Hydration, therapeutic, prophylactic, diagnostic injections and infusions, and chemotherapy and other highly complex drug or highly complex biologic agent administration": 100,
+            "Confirmatory consultation for a new or established patient (deleted codes)": 88,
+            "Moderate (conscious) sedation": 79,
+            "Bone/joint studies": 72,
+            "Endocrine system": 42,
+            "Hematology and coagulation": 42,
+            "Office/other outpatient services": 42,
+            "Conscious sedation (deleted codes)": 37,
+            "Maternity care and delivery": 33,
+            "Non-face-to-face nonphysician services": 28,
+            "Ophthalmology": 24
+          },
+          "values_truncated": true
+        },
+        "description": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Code description (often null)",
+          "missing_pct": 82.283,
+          "distinct_values_approx": 4,
+          "values": {
+            "VENT MGMT;SUBSQ DAYS(INVASIVE)": 86712,
+            "VENT MGMT, 1ST DAY (INVASIVE)": 12552,
+            "VENT MGMT;SUBSQ DAYS(NIV)": 1272,
+            "VENT MGMT,1ST DAY (NIV)": 1009
+          },
+          "values_truncated": false
+        }
+      }
+    },
+    "d_cpt": {
+      "description": "High-level CPT code ranges (sections and subsections), not individual codes; match cptevents.cpt_number to a range.",
+      "kind": "dictionary",
+      "rows": 134,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 131
+        },
+        "category": {
+          "type": "SMALLINT",
+          "role": "category",
+          "description": "Category number",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "1": 123
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 2
+        },
+        "sectionrange": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Range of codes in the section",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 10,
+          "values": {
+            "90281-99099; 99151-99199; 99500-99607": 32,
+            "99201-99499": 25,
+            "00100-01999; 99100-99150": 22,
+            "10000-69990": 19,
+            "80000-89398": 18
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 4
+        },
+        "sectionheader": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Section name",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 7,
+          "values": {
+            "Medicine": 32,
+            "Evaluation and management": 25,
+            "Anesthesia": 22,
+            "Surgery": 19,
+            "Pathology and laboratory": 18
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 3
+        },
+        "subsectionrange": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Range of codes in the subsection",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 132
+        },
+        "subsectionheader": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Subsection name",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 144
+        },
+        "codesuffix": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Code suffix",
+          "missing_pct": 91.791,
+          "distinct_values_approx": 2,
+          "values": {},
+          "values_truncated": false,
+          "rare_values_omitted": 2
+        },
+        "mincodeinsubsection": {
+          "type": "INTEGER",
+          "role": "number",
+          "description": "Lowest code number in the subsection",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 137
+        },
+        "maxcodeinsubsection": {
+          "type": "INTEGER",
+          "role": "number",
+          "description": "Highest code number in the subsection",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 133
+        }
+      }
+    },
+    "d_icd_diagnoses": {
+      "description": "Dictionary of ICD-9-CM diagnosis codes: code to short and long title.",
+      "kind": "dictionary",
+      "rows": 14567,
+      "key": [
+        "icd9_code"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 12451
+        },
+        "icd9_code": {
+          "type": "VARCHAR",
+          "role": "identifier",
+          "description": "ICD-9-CM diagnosis code without the dot (joins diagnoses_icd.icd9_code)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 16120,
+          "conventions": [
+            "group.icd9_format"
+          ]
+        },
+        "short_title": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Abbreviated title",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 16360
+        },
+        "long_title": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Full title, e.g. 'Diabetes mellitus without mention of complication, type II or unspecified type, not stated as uncontrolled'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 11067
+        }
+      }
+    },
+    "d_icd_procedures": {
+      "description": "Dictionary of ICD-9-CM procedure codes: code to short and long title.",
+      "kind": "dictionary",
+      "rows": 3882,
+      "key": [
+        "icd9_code"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4410
+        },
+        "icd9_code": {
+          "type": "VARCHAR",
+          "role": "identifier",
+          "description": "ICD-9-CM procedure code without the dot (joins procedures_icd.icd9_code)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4565,
+          "conventions": [
+            "group.icd9_format"
+          ]
+        },
+        "short_title": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Abbreviated title",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3936
+        },
+        "long_title": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Full title",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3854
+        }
+      }
+    },
+    "d_items": {
+      "description": "Dictionary of non-lab items: ITEMID to label, category, unit, source system, and the event table that uses it (CHARTEVENTS, INPUTEVENTS_CV/MV, OUTPUTEVENTS, PROCEDUREEVENTS_MV, DATETIMEEVENTS, MICROBIOLOGYEVENTS).",
+      "kind": "dictionary",
+      "rows": 12487,
+      "key": [
+        "itemid"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 11959
+        },
+        "itemid": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "Item identifier (joins the itemid of the table in linksto)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 10932
+        },
+        "label": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Item name, e.g. 'Heart Rate', 'Invasive Ventilation'",
+          "missing_pct": null,
+          "distinct_values_approx": 11599,
+          "conventions": [
+            "group.padded_text"
+          ],
+          "missing_note": "<11 rows missing"
+        },
+        "abbreviation": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Short name (MetaVision items only)",
+          "missing_pct": 76.039,
+          "distinct_values_approx": 3272,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "dbsource": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'carevue' or 'metavision': the same concept has different itemids in each system",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "carevue": 9059,
+            "metavision": 2992,
+            "hospital": 436
+          },
+          "values_truncated": false
+        },
+        "linksto": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Lowercase name of the event table that uses this itemid, e.g. 'chartevents', 'procedureevents_mv'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 7,
+          "values": {
+            "chartevents": 7212,
+            "inputevents_cv": 2938,
+            "outputevents": 1161,
+            "microbiologyevents": 436,
+            "inputevents_mv": 422,
+            "datetimeevents": 193,
+            "procedureevents_mv": 125
+          },
+          "values_truncated": false
+        },
+        "category": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Item category",
+          "missing_pct": 51.558,
+          "distinct_values_approx": 92
+        },
+        "unitname": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Unit of measurement",
+          "missing_pct": 90.118,
+          "distinct_values_approx": 54,
+          "values": {
+            "None": 383,
+            "mL": 366,
+            "mmHg": 83,
+            "mg": 67,
+            "dose": 61,
+            "cm": 58,
+            "%": 33,
+            "L/min": 22,
+            "cmH2O": 19,
+            "bpm": 13
+          },
+          "values_truncated": true,
+          "rare_values_omitted": 30
+        },
+        "param_type": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Value type (MetaVision)",
+          "missing_pct": 76.039,
+          "distinct_values_approx": 7,
+          "values": {
+            "Text": 1309,
+            "Numeric": 647,
+            "Solution": 422,
+            "Checkbox": 307,
+            "Date time": 142,
+            "Process": 125,
+            "Numeric with tag": 40
+          },
+          "values_truncated": false
+        },
+        "conceptid": {
+          "type": "INTEGER",
+          "role": "always_null",
+          "description": "Unused (always null)",
+          "missing_pct": 100.0,
+          "distinct_values_approx": 0,
+          "conventions": [
+            "group.all_null"
+          ]
+        }
+      }
+    },
+    "d_labitems": {
+      "description": "Dictionary of laboratory tests: lab ITEMID to test name, fluid, category, and LOINC code. Dictionary only: lab results are in LABEVENTS.",
+      "kind": "dictionary",
+      "rows": 753,
+      "key": [
+        "itemid"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 879
+        },
+        "itemid": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "Lab test identifier (joins labevents.itemid)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1104
+        },
+        "label": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Test name, e.g. 'Creatinine', '% Hemoglobin A1c'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 717
+        },
+        "fluid": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Specimen fluid, e.g. 'Blood', 'Urine'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 17,
+          "values": {
+            "Blood": 359,
+            "Urine": 103,
+            "Other Body Fluid": 82,
+            "Bone Marrow": 40,
+            "Ascites": 37,
+            "Pleural": 35,
+            "Cerebrospinal Fluid (CSF)": 30,
+            "Joint Fluid": 26,
+            "BLOOD": 15
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 7
+        },
+        "category": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'Chemistry', 'Hematology', or 'Blood Gas'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 6,
+          "values": {
+            "Hematology": 410,
+            "Chemistry": 274,
+            "Blood Gas": 34,
+            "CHEMISTRY": 19,
+            "HEMATOLOGY": 13
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "loinc_code": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "LOINC code, e.g. '4548-4'; may be null",
+          "missing_pct": 22.311,
+          "distinct_values_approx": 641
+        }
+      }
+    },
+    "datetimeevents": {
+      "description": "ICU observations whose value is a date or time (e.g. date of last dialysis, line insertion time), not a measurement.",
+      "kind": "event",
+      "rows": 4485937,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4025468
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 27950,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.04,
+          "distinct_values_approx": 30867,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch"
+          ]
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "ICU stay identifier (ICUSTAYS)",
+          "missing_pct": 0.093,
+          "distinct_values_approx": 44320,
+          "references": "icustays.icustay_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch"
+          ]
+        },
+        "itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Item (names in d_items, linksto = 'datetimeevents')",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 194,
+          "references": "d_items.itemid"
+        },
+        "charttime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time of charting",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 981597,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "storetime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time recorded",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1408096
+        },
+        "cgid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Caregiver identifier (CAREGIVERS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1753,
+          "references": "caregivers.cgid"
+        },
+        "value": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "The recorded date/time",
+          "missing_pct": 1.161,
+          "distinct_values_approx": 196080
+        },
+        "valueuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Unit (usually 'Date' or 'Date and Time')",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "Date": 3766608,
+            "Date and Time": 719329
+          },
+          "values_truncated": false
+        },
+        "warning": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "Warning flag",
+          "missing_pct": 40.103,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 2686689,
+            "1": 231
+          },
+          "values_truncated": false
+        },
+        "error": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "Error flag",
+          "missing_pct": 40.103,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 2686325,
+            "1": 595
+          },
+          "values_truncated": false,
+          "conventions": [
+            "quirk.datetimeevents.error_rows"
+          ]
+        },
+        "resultstatus": {
+          "type": "VARCHAR",
+          "role": "always_null",
+          "description": "Result status",
+          "missing_pct": 100.0,
+          "distinct_values_approx": 0,
+          "conventions": [
+            "group.all_null"
+          ]
+        },
+        "stopped": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Stopped status",
+          "missing_pct": 59.897,
+          "distinct_values_approx": 2,
+          "values": {
+            "NotStopd": 1766394,
+            "D/C'd": 32623
+          },
+          "values_truncated": false
+        }
+      }
+    },
+    "diagnoses_icd": {
+      "description": "Hospital-assigned ICD-9 diagnosis codes for each admission, assigned at discharge for billing, ordered by priority.",
+      "kind": "event",
+      "rows": 651047,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 693257
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.repeated_within_admission"
+          ]
+        },
+        "seq_num": {
+          "type": "INTEGER",
+          "role": "number",
+          "description": "Priority of the diagnosis within the admission; 1 = primary diagnosis",
+          "missing_pct": 0.007,
+          "distinct_values_approx": 39
+        },
+        "icd9_code": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "ICD-9-CM diagnosis code stored as text WITHOUT the dot: 250.00 is '25000', 401.9 is '4019', V45.81 is 'V4581'",
+          "missing_pct": 0.007,
+          "distinct_values_approx": 6177,
+          "references": "d_icd_diagnoses.icd9_code",
+          "conventions": [
+            "group.repeated_within_admission",
+            "group.dictionary_gap",
+            "group.icd9_format"
+          ]
+        }
+      }
+    },
+    "drgcodes": {
+      "description": "Diagnosis Related Groups (billing) for each admission, with severity and mortality ratings for APR-DRGs.",
+      "kind": "event",
+      "rows": 125557,
+      "key": [],
+      "table_conventions": [
+        "group.exact_duplicates"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 116332
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.repeated_within_admission"
+          ]
+        },
+        "drg_type": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'HCFA', 'MS' (Medicare Severity), or 'APR ' (All Patient Refined; stored with a trailing space, so compare TRIM(drg_type) = 'APR')",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "APR ": 66634,
+            "HCFA": 31644,
+            "MS": 27279
+          },
+          "values_truncated": false,
+          "conventions": [
+            "group.repeated_within_admission",
+            "dist.drgcodes.drg_type",
+            "group.padded_text"
+          ]
+        },
+        "drg_code": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "DRG code within its drg_type",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1804
+        },
+        "description": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "DRG description",
+          "missing_pct": 0.05,
+          "distinct_values_approx": 1452
+        },
+        "drg_severity": {
+          "type": "SMALLINT",
+          "role": "category",
+          "description": "Severity of illness 1-4 (APR only; null otherwise)",
+          "missing_pct": 46.929,
+          "distinct_values_approx": 5,
+          "values": {
+            "3": 24297,
+            "4": 22978,
+            "2": 14282,
+            "1": 5076
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "drg_mortality": {
+          "type": "SMALLINT",
+          "role": "category",
+          "description": "Risk of mortality 1-4 (APR only; null otherwise)",
+          "missing_pct": 46.929,
+          "distinct_values_approx": 5,
+          "values": {
+            "4": 19684,
+            "3": 18726,
+            "2": 14752,
+            "1": 13471
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        }
+      }
+    },
+    "icustays": {
+      "description": "One row per ICU stay: care units, ICU in/out times, length of stay, and source system.",
+      "kind": "core",
+      "rows": 61532,
+      "key": [
+        "icustay_id"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 55827
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608,
+          "references": "admissions.hadm_id"
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "ICU stay identifier (unique per row)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 64481
+        },
+        "dbsource": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "ICU documentation system: 'carevue' (2001-2008), 'metavision' (2008-2012), or 'both'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "carevue": 37776,
+            "metavision": 23620,
+            "both": 136
+          },
+          "values_truncated": false,
+          "conventions": [
+            "group.dbsource_crossover",
+            "dist.icustays.dbsource"
+          ]
+        },
+        "first_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "First ICU type: 'MICU' (medical), 'SICU' (surgical), 'CCU' (coronary care), 'CSRU' (cardiac surgery recovery), 'TSICU' (trauma surgical), 'NICU' (neonatal)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 6,
+          "values": {
+            "MICU": 21088,
+            "CSRU": 9312,
+            "SICU": 8891,
+            "NICU": 8100,
+            "CCU": 7726,
+            "TSICU": 6415
+          },
+          "values_truncated": false
+        },
+        "last_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Last ICU type (same values as first_careunit)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 6,
+          "values": {
+            "MICU": 21310,
+            "CSRU": 9392,
+            "SICU": 9213,
+            "NICU": 8100,
+            "CCU": 7406,
+            "TSICU": 6111
+          },
+          "values_truncated": false
+        },
+        "first_wardid": {
+          "type": "SMALLINT",
+          "role": "local_identifier",
+          "description": "First ward (physical location) identifier",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 16
+        },
+        "last_wardid": {
+          "type": "SMALLINT",
+          "role": "local_identifier",
+          "description": "Last ward identifier",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 16
+        },
+        "intime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "ICU admission time",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 56453,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "outtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "ICU discharge time",
+          "missing_pct": null,
+          "distinct_values_approx": 56396,
+          "missing_note": "<11 rows missing"
+        },
+        "los": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "ICU length of stay in fractional days",
+          "missing_pct": null,
+          "distinct_values_approx": 62147,
+          "missing_note": "<11 rows missing"
+        }
+      }
+    },
+    "inputevents_cv": {
+      "description": "ICU fluid and medication inputs documented in the CareVue system (2001-2008).",
+      "kind": "event",
+      "rows": 17527935,
+      "key": [],
+      "table_conventions": [
+        "group.exact_duplicates",
+        "quirk.icustays.without_inputevents"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 19438508
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 26110,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.129,
+          "distinct_values_approx": 33971,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch"
+          ]
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "ICU stay identifier (ICUSTAYS)",
+          "missing_pct": 0.174,
+          "distinct_values_approx": 36261,
+          "references": "icustays.icustay_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch",
+            "group.dbsource_crossover"
+          ]
+        },
+        "charttime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time of the input",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 1346881,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Input item (names in d_items)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2951,
+          "references": "d_items.itemid"
+        },
+        "amount": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Amount given",
+          "missing_pct": 29.127,
+          "distinct_values_approx": 173820
+        },
+        "amountuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Unit of amount",
+          "missing_pct": 24.718,
+          "distinct_values_approx": 9,
+          "values": {
+            "ml": 8893365,
+            "mg": 1888677,
+            "U": 875844,
+            "mcg": 411897,
+            "cal": 378354,
+            "mEq": 352374,
+            "mEQ": 198767,
+            "tsp": 148577,
+            "gm": 41106,
+            "cc": 4881,
+            "str": 1558
+          },
+          "values_truncated": false
+        },
+        "rate": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Rate",
+          "missing_pct": 76.426,
+          "distinct_values_approx": 17194
+        },
+        "rateuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Unit of rate",
+          "missing_pct": 76.197,
+          "distinct_values_approx": 11,
+          "values": {
+            "mcgkgmin": 1817360,
+            "Uhr": 838090,
+            "mghr": 612544,
+            "mcghr": 489287,
+            "mgmin": 208471,
+            "Umin": 99798,
+            "mcgkghr": 36175,
+            "mgkghr": 35693,
+            "mcgmin": 33245,
+            "gmhr": 1349,
+            "Ukghr": 164,
+            "mEqkghr": 80
+          },
+          "values_truncated": false
+        },
+        "storetime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time recorded",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3257368
+        },
+        "cgid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Caregiver identifier (CAREGIVERS)",
+          "missing_pct": 2.02,
+          "distinct_values_approx": 1221,
+          "references": "caregivers.cgid"
+        },
+        "orderid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Order identifier",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 9031725
+        },
+        "linkorderid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Links related orders",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 349404
+        },
+        "stopped": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Stopped status",
+          "missing_pct": 97.258,
+          "distinct_values_approx": 4,
+          "values": {
+            "D/C'd": 241622,
+            "Stopped": 204822,
+            "Restart": 32439,
+            "NotStopd": 1668
+          },
+          "values_truncated": false
+        },
+        "newbottle": {
+          "type": "INTEGER",
+          "role": "flag",
+          "description": "New bottle flag",
+          "missing_pct": 98.597,
+          "distinct_values_approx": 1,
+          "values": {
+            "1": 245899
+          },
+          "values_truncated": false
+        },
+        "originalamount": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Original amount",
+          "missing_pct": 43.105,
+          "distinct_values_approx": 483
+        },
+        "originalamountuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Original amount unit",
+          "missing_pct": 24.412,
+          "distinct_values_approx": 10,
+          "values": {
+            "ml": 6679044,
+            "mg": 1888912,
+            "cc": 1173559,
+            "U": 876821,
+            "str": 726562,
+            "mcg": 411897,
+            "cal": 378354,
+            "vl": 373023,
+            "mEq": 352374,
+            "mEQ": 198767,
+            "tsp": 148577,
+            "gm": 41106
+          },
+          "values_truncated": false
+        },
+        "originalroute": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Original route",
+          "missing_pct": 0.609,
+          "distinct_values_approx": 13,
+          "values": {
+            "Intravenous Push": 9215677,
+            "IV Drip": 4131467,
+            "Intravenous": 1252093,
+            "Gastric/Feeding Tube": 1066706,
+            "Nasogastric": 725631,
+            "Intravenous Infusion": 480507,
+            "By Mouth": 312249,
+            "Oral": 188113,
+            "Drip": 40709,
+            "GU": 5408,
+            "IV Piggyback": 1413,
+            "Oral or Nasogastric": 1279
+          },
+          "values_truncated": false
+        },
+        "originalrate": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Original rate",
+          "missing_pct": 70.295,
+          "distinct_values_approx": 6713
+        },
+        "originalrateuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Original rate unit",
+          "missing_pct": 69.926,
+          "distinct_values_approx": 1,
+          "values": {
+            "ml/hr": 5271371
+          },
+          "values_truncated": false
+        },
+        "originalsite": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Original site",
+          "missing_pct": 98.987,
+          "distinct_values_approx": 23,
+          "values": {
+            "PO / NG": 26917,
+            "Right Int. Jugular": 25420,
+            "Right Arm": 21529,
+            "UVC": 17895,
+            "Left Arm": 17321,
+            "Left Subclavian": 14674,
+            "Right Subclavian": 12182,
+            "Percutaneous Cath": 12075,
+            "Left Int. Jugular": 5995,
+            "Right Hand": 4825,
+            "UAC": 4589,
+            "Right Femoral": 4338,
+            "Left Hand": 2614,
+            "Left Femoral": 1632,
+            "Umb Venous Primary": 1594,
+            "Umb Venous Secondary": 1172,
+            "Left Foot": 987,
+            "Right Foot": 542,
+            "Right Leg": 521,
+            "Peripheral Arterial": 329,
+            "Scalp": 251,
+            "Left Leg": 170
+          },
+          "values_truncated": false
+        }
+      }
+    },
+    "microbiologyevents": {
+      "description": "Microbiology tests: specimens, organisms grown, and antibiotic sensitivities.",
+      "kind": "event",
+      "rows": 631726,
+      "key": [],
+      "table_conventions": [
+        "group.exact_duplicates"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 693257
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 36841,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 46002,
+          "references": "admissions.hadm_id"
+        },
+        "chartdate": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of the test",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 31871,
+          "conventions": [
+            "group.outside_admission",
+            "quirk.microbiologyevents.date_only"
+          ]
+        },
+        "charttime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time of the test (may be null)",
+          "missing_pct": 6.612,
+          "distinct_values_approx": 283403,
+          "conventions": [
+            "quirk.microbiologyevents.date_only"
+          ]
+        },
+        "spec_itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Specimen item",
+          "missing_pct": 0.013,
+          "distinct_values_approx": 102,
+          "references": "d_items.itemid"
+        },
+        "spec_type_desc": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Specimen type, uppercase, e.g. 'BLOOD CULTURE', 'URINE', 'SPUTUM'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 88
+        },
+        "org_itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Organism item",
+          "missing_pct": 48.256,
+          "distinct_values_approx": 337,
+          "references": "d_items.itemid"
+        },
+        "org_name": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Organism grown, uppercase, e.g. 'STAPH AUREUS COAG +', 'ESCHERICHIA COLI'; null means no growth",
+          "missing_pct": 48.076,
+          "distinct_values_approx": 442,
+          "conventions": [
+            "quirk.microbiologyevents.no_organism",
+            "group.padded_text"
+          ]
+        },
+        "isolate_num": {
+          "type": "SMALLINT",
+          "role": "category",
+          "description": "Isolate number",
+          "missing_pct": 48.076,
+          "distinct_values_approx": 6,
+          "values": {
+            "1": 298756,
+            "2": 26458,
+            "3": 2454,
+            "4": 330,
+            "5": 17
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "ab_itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Antibiotic item",
+          "missing_pct": 56.336,
+          "distinct_values_approx": 27,
+          "references": "d_items.itemid"
+        },
+        "ab_name": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Antibiotic tested, uppercase, e.g. 'VANCOMYCIN', 'OXACILLIN'",
+          "missing_pct": 56.336,
+          "distinct_values_approx": 29,
+          "values": {
+            "GENTAMICIN": 25770,
+            "LEVOFLOXACIN": 18652,
+            "CEFTAZIDIME": 14640,
+            "TOBRAMYCIN": 14504,
+            "TRIMETHOPRIM/SULFA": 14105,
+            "CEFEPIME": 13465,
+            "MEROPENEM": 12982,
+            "VANCOMYCIN": 12915,
+            "OXACILLIN": 12201,
+            "CIPROFLOXACIN": 12023,
+            "PIPERACILLIN/TAZO": 11549,
+            "ERYTHROMYCIN": 11060,
+            "CEFTRIAXONE": 10865,
+            "AMPICILLIN": 9547,
+            "TETRACYCLINE": 9165,
+            "PENICILLIN": 9156,
+            "CLINDAMYCIN": 8760,
+            "AMPICILLIN/SULBACTAM": 8150,
+            "PIPERACILLIN": 7836,
+            "CEFAZOLIN": 7812,
+            "RIFAMPIN": 7130,
+            "NITROFURANTOIN": 6428,
+            "IMIPENEM": 5990,
+            "CEFUROXIME": 5527,
+            "PENICILLIN G": 1905,
+            "LINEZOLID": 1425,
+            "AMIKACIN": 946,
+            "CHLORAMPHENICOL": 878,
+            "DAPTOMYCIN": 445
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "dilution_text": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Dilution as text",
+          "missing_pct": 57.679,
+          "distinct_values_approx": 42,
+          "values": {
+            "<=1": 69596,
+            "<=0.25": 26756,
+            "=>8": 20986,
+            "<=0.5": 20708,
+            "<=4": 16306,
+            "=>4": 12259,
+            "2": 11285,
+            "4": 11016,
+            "=>16": 9647,
+            "=>32": 9113,
+            "8": 8916,
+            "=>0.5": 7217,
+            "=>64": 7165,
+            "<=2": 6913,
+            "16": 4870,
+            "1": 4075,
+            "<=16": 3909,
+            "0.5": 3081,
+            "32": 2941,
+            "=>128": 2300,
+            "0.25": 2066,
+            "<=0.12": 1981,
+            "64": 1717,
+            "128": 514,
+            "<=8": 410,
+            "256": 351,
+            "<=0.06": 298,
+            "=>2": 177,
+            "<=0.03": 174,
+            ">256": 172,
+            "0.12": 119,
+            "0.06": 86,
+            "<=20": 49,
+            "=>1": 49,
+            "=>512": 37,
+            "=>320": 25,
+            "0.03": 20
+          },
+          "values_truncated": true,
+          "rare_values_omitted": 3
+        },
+        "dilution_comparison": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Comparison operator for the dilution",
+          "missing_pct": 57.707,
+          "distinct_values_approx": 3,
+          "values": {
+            "<=": 147117,
+            "=>": 68980,
+            "=": 51081
+          },
+          "values_truncated": false
+        },
+        "dilution_value": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Dilution value",
+          "missing_pct": 57.707,
+          "distinct_values_approx": 18
+        },
+        "interpretation": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Sensitivity: 'S' (sensitive), 'R' (resistant), 'I' (intermediate), 'P' (pending)",
+          "missing_pct": 56.336,
+          "distinct_values_approx": 3,
+          "values": {
+            "S": 188635,
+            "R": 77169,
+            "I": 10023
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        }
+      }
+    },
+    "patients": {
+      "description": "One row per patient: gender, date of birth, and dates of death.",
+      "kind": "core",
+      "rows": 46520,
+      "key": [
+        "subject_id"
+      ],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 42058
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "identifier",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543
+        },
+        "gender": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'M' or 'F'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "M": 26121,
+            "F": 20399
+          },
+          "values_truncated": false
+        },
+        "dob": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of birth (shifted). Patients older than 89 at their first admission have DOB shifted so that their age appears as about 300 years",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 41606,
+          "conventions": [
+            "temporal.patients.age_over_89_shifted"
+          ]
+        },
+        "dod": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of death from any source (hospital or social security records); null if not known to have died",
+          "missing_pct": 66.124,
+          "distinct_values_approx": 11569
+        },
+        "dod_hosp": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of death recorded in the hospital database",
+          "missing_pct": 78.56,
+          "distinct_values_approx": 7925
+        },
+        "dod_ssn": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Date of death from the social security database",
+          "missing_pct": 71.242,
+          "distinct_values_approx": 11225
+        },
+        "expire_flag": {
+          "type": "INTEGER",
+          "role": "flag",
+          "description": "1 if the patient has died (dod is not null), else 0",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 30761,
+            "1": 15759
+          },
+          "values_truncated": false
+        }
+      }
+    },
+    "prescriptions": {
+      "description": "Medication orders (not confirmed administration): drug, dose, route, and dates.",
+      "kind": "event",
+      "rows": 4156450,
+      "key": [],
+      "table_conventions": [
+        "group.exact_duplicates"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3886673
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 36398,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 47915,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch"
+          ]
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "ICU stay identifier if ordered in the ICU",
+          "missing_pct": 34.83,
+          "distinct_values_approx": 58981,
+          "references": "icustays.icustay_id",
+          "conventions": [
+            "group.icustay_hadm_mismatch"
+          ]
+        },
+        "startdate": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Order start date",
+          "missing_pct": 0.077,
+          "distinct_values_approx": 34409,
+          "conventions": [
+            "group.negative_duration",
+            "group.outside_admission"
+          ]
+        },
+        "enddate": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Order end date",
+          "missing_pct": 0.13,
+          "distinct_values_approx": 33737,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "drug_type": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'MAIN', 'BASE', or 'ADDITIVE'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "MAIN": 3216882,
+            "BASE": 925089,
+            "ADDITIVE": 14479
+          },
+          "values_truncated": false
+        },
+        "drug": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Drug name as ordered (free text, mixed case)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4406,
+          "conventions": [
+            "quirk.prescriptions.ndc_unusable",
+            "group.padded_text"
+          ]
+        },
+        "drug_name_poe": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Drug name in the order entry system",
+          "missing_pct": 40.04,
+          "distinct_values_approx": 3977,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "drug_name_generic": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Generic drug name",
+          "missing_pct": 40.01,
+          "distinct_values_approx": 2842,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "formulary_drug_cd": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "Hospital formulary code",
+          "missing_pct": 0.047,
+          "distinct_values_approx": 3047
+        },
+        "gsn": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "Generic Sequence Number",
+          "missing_pct": 12.202,
+          "distinct_values_approx": 3092,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "ndc": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "National Drug Code",
+          "missing_pct": 0.107,
+          "distinct_values_approx": 3964,
+          "conventions": [
+            "quirk.prescriptions.ndc_unusable"
+          ]
+        },
+        "prod_strength": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Product strength",
+          "missing_pct": 0.033,
+          "distinct_values_approx": 4170,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "dose_val_rx": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Prescribed dose",
+          "missing_pct": 0.032,
+          "distinct_values_approx": 2712,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "dose_unit_rx": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Unit of the dose",
+          "missing_pct": 0.032,
+          "distinct_values_approx": 122
+        },
+        "form_val_disp": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Amount dispensed",
+          "missing_pct": 0.033,
+          "distinct_values_approx": 3372,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "form_unit_disp": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Unit dispensed",
+          "missing_pct": 0.034,
+          "distinct_values_approx": 100
+        },
+        "route": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Route, e.g. 'PO', 'IV'",
+          "missing_pct": 0.028,
+          "distinct_values_approx": 79
+        }
+      }
+    },
+    "procedureevents_mv": {
+      "description": "Procedures documented in the ICU (MetaVision patients only, 2008-2012), e.g. ventilation, dialysis, line insertion, imaging, with start and end times.",
+      "kind": "event",
+      "rows": 258066,
+      "key": [],
+      "table_conventions": [
+        "quirk.icustays.without_procedureevents"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 221234
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 16739,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 22152,
+          "references": "admissions.hadm_id"
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "ICU stay identifier (ICUSTAYS)",
+          "missing_pct": 0.034,
+          "distinct_values_approx": 22842,
+          "references": "icustays.icustay_id",
+          "conventions": [
+            "group.dbsource_crossover"
+          ]
+        },
+        "starttime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Procedure start time",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 183584,
+          "conventions": [
+            "group.negative_duration",
+            "group.outside_admission"
+          ]
+        },
+        "endtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Procedure end time",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 171796,
+          "conventions": [
+            "group.negative_duration"
+          ]
+        },
+        "itemid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Procedure item (names in d_items, linksto = 'procedureevents_mv')",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 141,
+          "references": "d_items.itemid"
+        },
+        "value": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Amount or duration",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 14369
+        },
+        "valueuom": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Unit of value, e.g. 'min', 'None'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 4,
+          "values": {
+            "None": 144246,
+            "min": 110081,
+            "day": 2759,
+            "hour": 980
+          },
+          "values_truncated": false
+        },
+        "location": {
+          "type": "VARCHAR",
+          "role": "text",
+          "description": "Body location",
+          "missing_pct": 79.613,
+          "distinct_values_approx": 111,
+          "conventions": [
+            "group.padded_text"
+          ]
+        },
+        "locationcategory": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Location category",
+          "missing_pct": 79.613,
+          "distinct_values_approx": 7,
+          "values": {
+            "Peripheral": 20960,
+            "Invasive Venous": 10921,
+            "Invasive Arterial": 10087,
+            "Peripheral - old": 9815,
+            "Dialysis": 547,
+            "ICP Line": 160,
+            "Peritoneal Dialysis": 78,
+            "Intraosseous": 44
+          },
+          "values_truncated": false
+        },
+        "storetime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time the event was recorded",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 191861
+        },
+        "cgid": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Caregiver identifier (CAREGIVERS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 964,
+          "references": "caregivers.cgid"
+        },
+        "orderid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Order identifier",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 288927
+        },
+        "linkorderid": {
+          "type": "INTEGER",
+          "role": "local_identifier",
+          "description": "Links related orders",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 288927
+        },
+        "ordercategoryname": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Order category",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 11,
+          "values": {
+            "Procedures": 66495,
+            "Peripheral Lines": 61503,
+            "Imaging": 46310,
+            "Invasive Lines": 35751,
+            "Intubation/Extubation": 12842,
+            "Ventilation": 12160,
+            "Significant Events": 9913,
+            "Communication": 8560,
+            "Continuous Procedures": 2195,
+            "Dialysis": 1985,
+            "Peritoneal Dialysis": 226,
+            "CRRT Filter Change": 126
+          },
+          "values_truncated": false
+        },
+        "secondaryordercategoryname": {
+          "type": "VARCHAR",
+          "role": "always_null",
+          "description": "Secondary order category",
+          "missing_pct": 100.0,
+          "distinct_values_approx": 0,
+          "conventions": [
+            "group.all_null"
+          ]
+        },
+        "ordercategorydescription": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Order type description",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "Electrolytes": 144246,
+            "Task": 113820
+          },
+          "values_truncated": false
+        },
+        "isopenbag": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "Open bag flag",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 151170,
+            "1": 106896
+          },
+          "values_truncated": false
+        },
+        "continueinnextdept": {
+          "type": "SMALLINT",
+          "role": "flag",
+          "description": "Continued in the next department",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2,
+          "values": {
+            "0": 258004,
+            "1": 62
+          },
+          "values_truncated": false
+        },
+        "cancelreason": {
+          "type": "SMALLINT",
+          "role": "category",
+          "description": "Cancellation reason code",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "0": 250284,
+            "1": 5689,
+            "2": 2093
+          },
+          "values_truncated": false
+        },
+        "statusdescription": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Status, e.g. 'FinishedRunning', 'Stopped'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 3,
+          "values": {
+            "FinishedRunning": 246430,
+            "Rewritten": 8590,
+            "Stopped": 2846,
+            "Paused": 200
+          },
+          "values_truncated": false,
+          "conventions": [
+            "quirk.procedureevents_mv.rewritten"
+          ]
+        },
+        "comments_editedby": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Editor role",
+          "missing_pct": 99.189,
+          "distinct_values_approx": 6,
+          "values": {
+            "RN": 2048,
+            "RRT": 28
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 4
+        },
+        "comments_canceledby": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Canceller role",
+          "missing_pct": 97.796,
+          "distinct_values_approx": 18,
+          "values": {
+            "RN": 4930,
+            "RRT": 445,
+            "MD": 163,
+            "Unknown": 66,
+            "CRTT": 21,
+            "RT": 15
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 11
+        },
+        "comments_date": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Comment time",
+          "missing_pct": 96.984,
+          "distinct_values_approx": 5973
+        }
+      }
+    },
+    "procedures_icd": {
+      "description": "ICD-9 procedure codes for each admission, ordered by sequence.",
+      "kind": "event",
+      "rows": 240095,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 213666
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 39614,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 42982,
+          "references": "admissions.hadm_id",
+          "conventions": [
+            "group.repeated_within_admission"
+          ]
+        },
+        "seq_num": {
+          "type": "INTEGER",
+          "role": "number",
+          "description": "Order of the procedure within the admission",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 41
+        },
+        "icd9_code": {
+          "type": "VARCHAR",
+          "role": "code",
+          "description": "ICD-9-CM procedure code WITHOUT the dot: 36.10 is '3610', 96.71 is '9671'",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 2229,
+          "references": "d_icd_procedures.icd9_code",
+          "conventions": [
+            "group.repeated_within_admission",
+            "group.dictionary_gap",
+            "group.icd9_format"
+          ]
+        }
+      }
+    },
+    "services": {
+      "description": "Clinical service the patient was under during an admission (e.g. medicine, surgery), with the time of each service change.",
+      "kind": "event",
+      "rows": 73343,
+      "key": [],
+      "table_conventions": [],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 63228
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608,
+          "references": "admissions.hadm_id"
+        },
+        "transfertime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time the patient moved to the current service",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 68326,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "prev_service": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Previous service (null for the first one)",
+          "missing_pct": 80.001,
+          "distinct_values_approx": 18,
+          "values": {
+            "MED": 5001,
+            "CMED": 3655,
+            "OMED": 1066,
+            "SURG": 993,
+            "NSURG": 655,
+            "TRAUM": 653,
+            "NMED": 576,
+            "ORTHO": 479,
+            "CSURG": 396,
+            "VSURG": 351,
+            "TSURG": 312,
+            "GU": 150,
+            "GYN": 121,
+            "ENT": 88,
+            "PSURG": 59,
+            "NB": 56,
+            "OBS": 56
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 1
+        },
+        "curr_service": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Service code: 'MED' (medicine), 'SURG' (surgery), 'CMED' (cardiac medical), 'CSURG' (cardiac surgery), 'NSURG' (neurosurgery), 'NMED' (neurology), 'TRAUM' (trauma), 'ORTHO' (orthopedics), 'VSURG' (vascular), 'TSURG' (thoracic), 'PSURG' (plastic), 'GU' (urology), 'GYN', 'OBS', 'ENT', 'DENT', 'OMED' (oncology), 'PSYCH', 'NB' (newborn), 'NBB' (newborn baby)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 21,
+          "values": {
+            "MED": 24866,
+            "CMED": 9135,
+            "CSURG": 7911,
+            "NB": 7806,
+            "SURG": 5514,
+            "NSURG": 4100,
+            "TRAUM": 3137,
+            "NMED": 2957,
+            "OMED": 2286,
+            "VSURG": 1455,
+            "TSURG": 1338,
+            "ORTHO": 1101,
+            "GU": 436,
+            "NBB": 346,
+            "GYN": 306,
+            "PSURG": 283,
+            "ENT": 247,
+            "OBS": 113
+          },
+          "values_truncated": false,
+          "rare_values_omitted": 2
+        }
+      }
+    },
+    "transfers": {
+      "description": "Patient movements between hospital units and beds during an admission, including ICU admission and discharge events.",
+      "kind": "event",
+      "rows": 261897,
+      "key": [],
+      "table_conventions": [
+        "group.exact_duplicates"
+      ],
+      "columns": {
+        "row_id": {
+          "type": "INTEGER",
+          "role": "row_number",
+          "description": "Row number within this table; not an identifier, never use it for joins",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 223275
+        },
+        "subject_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Patient identifier (PATIENTS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 40543,
+          "references": "patients.subject_id"
+        },
+        "hadm_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "Hospital admission identifier (ADMISSIONS)",
+          "missing_pct": 0.0,
+          "distinct_values_approx": 57608,
+          "references": "admissions.hadm_id"
+        },
+        "icustay_id": {
+          "type": "INTEGER",
+          "role": "reference",
+          "description": "ICU stay identifier when the movement is part of an ICU stay; else null",
+          "missing_pct": 66.506,
+          "distinct_values_approx": 64481,
+          "references": "icustays.icustay_id"
+        },
+        "dbsource": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'carevue' or 'metavision'",
+          "missing_pct": 0.092,
+          "distinct_values_approx": 3,
+          "values": {
+            "carevue": 161797,
+            "metavision": 99306,
+            "both": 553
+          },
+          "values_truncated": false
+        },
+        "eventtype": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "'admit', 'transfer', or 'discharge'",
+          "missing_pct": 0.009,
+          "distinct_values_approx": 3,
+          "values": {
+            "transfer": 144045,
+            "discharge": 58919,
+            "admit": 58909
+          },
+          "values_truncated": false
+        },
+        "prev_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Previous ICU type (null for non-ICU wards)",
+          "missing_pct": 63.341,
+          "distinct_values_approx": 7,
+          "values": {
+            "MICU": 26398,
+            "NICU": 18631,
+            "CSRU": 13662,
+            "SICU": 11321,
+            "CCU": 9534,
+            "NWARD": 8297,
+            "TSICU": 8166
+          },
+          "values_truncated": false
+        },
+        "curr_careunit": {
+          "type": "VARCHAR",
+          "role": "category",
+          "description": "Current ICU type: 'MICU', 'SICU', 'CCU', 'CSRU', 'TSICU', 'NICU'; null for non-ICU wards",
+          "missing_pct": 63.338,
+          "distinct_values_approx": 7,
+          "values": {
+            "MICU": 26400,
+            "NICU": 18629,
+            "CSRU": 13663,
+            "SICU": 11323,
+            "CCU": 9542,
+            "NWARD": 8295,
+            "TSICU": 8164
+          },
+          "values_truncated": false
+        },
+        "prev_wardid": {
+          "type": "SMALLINT",
+          "role": "local_identifier",
+          "description": "Previous ward identifier",
+          "missing_pct": 22.502,
+          "distinct_values_approx": 53
+        },
+        "curr_wardid": {
+          "type": "SMALLINT",
+          "role": "local_identifier",
+          "description": "Current ward identifier",
+          "missing_pct": 22.506,
+          "distinct_values_approx": 53
+        },
+        "intime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time the patient entered the current unit",
+          "missing_pct": 0.009,
+          "distinct_values_approx": 261758,
+          "conventions": [
+            "group.outside_admission"
+          ]
+        },
+        "outtime": {
+          "type": "TIMESTAMP",
+          "role": "time",
+          "description": "Time the patient left the current unit",
+          "missing_pct": 22.519,
+          "distinct_values_approx": 209166
+        },
+        "los": {
+          "type": "DOUBLE",
+          "role": "number",
+          "description": "Length of stay in the current unit, in hours",
+          "missing_pct": 22.519,
+          "distinct_values_approx": 36909
+        }
+      }
+    }
+  },
+  "links": [
+    {
+      "from": "admissions.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 58976,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "callout.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 34499,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "callout.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 34499,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "cptevents.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 573146,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "cptevents.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 573146,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "datetimeevents.cgid",
+      "to": "caregivers.cgid",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4485937,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "datetimeevents.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4484165,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 1772
+    },
+    {
+      "from": "datetimeevents.icustay_id",
+      "to": "icustays.icustay_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4481781,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 4156
+    },
+    {
+      "from": "datetimeevents.itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4485937,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "datetimeevents.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4485937,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "diagnoses_icd.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 651047,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "diagnoses_icd.icd9_code",
+      "to": "d_icd_diagnoses.icd9_code",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 651000,
+      "unmatched_rows": 16291,
+      "unmatched_pct": 2.502,
+      "rows_without_key": 47
+    },
+    {
+      "from": "diagnoses_icd.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 651047,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "drgcodes.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 125557,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "drgcodes.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 125557,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "icustays.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 61532,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "icustays.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 61532,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "inputevents_cv.cgid",
+      "to": "caregivers.cgid",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 17173928,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 354007
+    },
+    {
+      "from": "inputevents_cv.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 17505266,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 22669
+    },
+    {
+      "from": "inputevents_cv.icustay_id",
+      "to": "icustays.icustay_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 17497482,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 30453
+    },
+    {
+      "from": "inputevents_cv.itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 17527935,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "inputevents_cv.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 17527935,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "microbiologyevents.ab_itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 275834,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 355892
+    },
+    {
+      "from": "microbiologyevents.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 631726,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "microbiologyevents.org_itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 326881,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 304845
+    },
+    {
+      "from": "microbiologyevents.spec_itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 631647,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 79
+    },
+    {
+      "from": "microbiologyevents.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 631726,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "prescriptions.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4156450,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "prescriptions.icustay_id",
+      "to": "icustays.icustay_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 2708742,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 1447708
+    },
+    {
+      "from": "prescriptions.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 4156450,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedureevents_mv.cgid",
+      "to": "caregivers.cgid",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 258066,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedureevents_mv.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 258066,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedureevents_mv.icustay_id",
+      "to": "icustays.icustay_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 257978,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 88
+    },
+    {
+      "from": "procedureevents_mv.itemid",
+      "to": "d_items.itemid",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 258066,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedureevents_mv.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 258066,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedures_icd.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 240095,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedures_icd.icd9_code",
+      "to": "d_icd_procedures.icd9_code",
+      "kind": "dictionary",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 240095,
+      "unmatched_rows": 2147,
+      "unmatched_pct": 0.894,
+      "rows_without_key": 0
+    },
+    {
+      "from": "procedures_icd.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 240095,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "services.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 73343,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "services.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 73343,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "transfers.hadm_id",
+      "to": "admissions.hadm_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 261897,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    },
+    {
+      "from": "transfers.icustay_id",
+      "to": "icustays.icustay_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 87721,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 174176
+    },
+    {
+      "from": "transfers.subject_id",
+      "to": "patients.subject_id",
+      "kind": "key",
+      "evidence": "documented MIMIC-III link, checked against the data",
+      "rows_checked": 261897,
+      "unmatched_rows": 0,
+      "unmatched_pct": 0.0,
+      "rows_without_key": 0
+    }
+  ]
+}

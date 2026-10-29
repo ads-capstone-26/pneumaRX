@@ -1,0 +1,766 @@
+{
+  "report": "mimic3_query_conventions.json",
+  "about": "Shared query conventions for MIMIC-III, with the data fingerprint they were derived from. Read by the query system.",
+  "maintenance": "Shared snapshot: regenerate only with `python scripts/prepare_mimic3.py publish` (dataset maintainer); do not edit by hand.",
+  "small_count_rule": "Counts from 1 to 10 are written as \"<11\" and their percentage as null; category values seen in fewer than 11 rows are omitted.",
+  "data_fingerprint": {
+    "id": "55cb7586f72a",
+    "row_counts": {
+      "admissions": 58976,
+      "callout": 34499,
+      "caregivers": 7567,
+      "cptevents": 573146,
+      "d_cpt": 134,
+      "d_icd_diagnoses": 14567,
+      "d_icd_procedures": 3882,
+      "d_items": 12487,
+      "d_labitems": 753,
+      "datetimeevents": 4485937,
+      "diagnoses_icd": 651047,
+      "drgcodes": 125557,
+      "icustays": 61532,
+      "inputevents_cv": 17527935,
+      "microbiologyevents": 631726,
+      "patients": 46520,
+      "prescriptions": 4156450,
+      "procedureevents_mv": 258066,
+      "procedures_icd": 240095,
+      "services": 73343,
+      "transfers": 261897
+    }
+  },
+  "conventions": [
+    {
+      "id": "group.repeated_within_admission",
+      "rule": "These combinations repeat within one admission: diagnoses_icd (hadm_id, icd9_code), procedures_icd (hadm_id, icd9_code), drgcodes (hadm_id, drg_type). Count DISTINCT admissions or codes, not rows.",
+      "targets": [
+        "diagnoses_icd (hadm_id, icd9_code)",
+        "procedures_icd (hadm_id, icd9_code)",
+        "drgcodes (hadm_id, drg_type)"
+      ],
+      "applies_to": [
+        "diagnoses_icd.hadm_id",
+        "diagnoses_icd.icd9_code",
+        "procedures_icd.hadm_id",
+        "procedures_icd.icd9_code",
+        "drgcodes.hadm_id",
+        "drgcodes.drg_type"
+      ],
+      "sources": [
+        "keys.diagnoses_icd.hadm_id,icd9_code",
+        "keys.procedures_icd.hadm_id,icd9_code",
+        "keys.drgcodes.hadm_id,drg_type"
+      ],
+      "evidence": {
+        "diagnoses_icd (hadm_id, icd9_code)": {
+          "flagged": 60,
+          "total": 651047,
+          "pct": 0.009
+        },
+        "procedures_icd (hadm_id, icd9_code)": {
+          "flagged": 11416,
+          "total": 240095,
+          "pct": 4.755
+        },
+        "drgcodes (hadm_id, drg_type)": {
+          "flagged": 27272,
+          "total": 125557,
+          "pct": 21.721
+        }
+      }
+    },
+    {
+      "id": "group.exact_duplicates",
+      "rule": "These tables contain exact duplicate rows (all columns equal except row_id): drgcodes, inputevents_cv, microbiologyevents, prescriptions, transfers. Use COUNT(DISTINCT ...) or SELECT DISTINCT before counting or summing.",
+      "targets": [
+        "drgcodes",
+        "inputevents_cv",
+        "microbiologyevents",
+        "prescriptions",
+        "transfers"
+      ],
+      "applies_to": [
+        "drgcodes.*",
+        "inputevents_cv.*",
+        "microbiologyevents.*",
+        "prescriptions.*",
+        "transfers.*"
+      ],
+      "sources": [
+        "keys.drgcodes.exact_duplicates",
+        "keys.inputevents_cv.exact_duplicates",
+        "keys.microbiologyevents.exact_duplicates",
+        "keys.prescriptions.exact_duplicates",
+        "keys.transfers.exact_duplicates"
+      ],
+      "evidence": {
+        "drgcodes": {
+          "flagged": 25233,
+          "total": 125557,
+          "pct": 20.097
+        },
+        "inputevents_cv": {
+          "flagged": 9418,
+          "total": 17527935,
+          "pct": 0.054
+        },
+        "microbiologyevents": {
+          "flagged": 18414,
+          "total": 631726,
+          "pct": 2.915
+        },
+        "prescriptions": {
+          "flagged": 236244,
+          "total": 4156450,
+          "pct": 5.684
+        },
+        "transfers": {
+          "flagged": 40,
+          "total": 261897,
+          "pct": 0.015
+        }
+      }
+    },
+    {
+      "id": "group.dictionary_gap",
+      "rule": "Some codes have no entry in their dictionary table: diagnoses_icd.icd9_code -> d_icd_diagnoses, procedures_icd.icd9_code -> d_icd_procedures. Use a LEFT JOIN to the dictionary (an INNER JOIN drops those rows) and report unlabeled codes as such.",
+      "targets": [
+        "diagnoses_icd.icd9_code -> d_icd_diagnoses",
+        "procedures_icd.icd9_code -> d_icd_procedures"
+      ],
+      "applies_to": [
+        "diagnoses_icd.icd9_code",
+        "procedures_icd.icd9_code"
+      ],
+      "sources": [
+        "integrity.diagnoses_icd.icd9_code->d_icd_diagnoses",
+        "integrity.procedures_icd.icd9_code->d_icd_procedures"
+      ],
+      "evidence": {
+        "diagnoses_icd.icd9_code -> d_icd_diagnoses": {
+          "flagged": 16291,
+          "total": 651000,
+          "null_keys": 47,
+          "distinct_unmatched": 143,
+          "pct": 2.502
+        },
+        "procedures_icd.icd9_code -> d_icd_procedures": {
+          "flagged": 2147,
+          "total": 240095,
+          "null_keys": 0,
+          "distinct_unmatched": 16,
+          "pct": 0.894
+        }
+      }
+    },
+    {
+      "id": "group.icustay_hadm_mismatch",
+      "rule": "For a few rows, the event's hadm_id differs from icustays.hadm_id of the same icustay_id: datetimeevents, inputevents_cv, prescriptions. Never join these tables to icustays on both icustay_id and hadm_id at once (those rows are dropped): join on icustay_id for ICU-stay questions and on the event's own hadm_id for admission questions.",
+      "targets": [
+        "datetimeevents",
+        "inputevents_cv",
+        "prescriptions"
+      ],
+      "applies_to": [
+        "datetimeevents.icustay_id",
+        "datetimeevents.hadm_id",
+        "inputevents_cv.icustay_id",
+        "inputevents_cv.hadm_id",
+        "prescriptions.icustay_id",
+        "prescriptions.hadm_id"
+      ],
+      "sources": [
+        "integrity.datetimeevents.icustay_hadm_consistent",
+        "integrity.inputevents_cv.icustay_hadm_consistent",
+        "integrity.prescriptions.icustay_hadm_consistent"
+      ],
+      "evidence": {
+        "datetimeevents": {
+          "flagged": 408,
+          "total": 4481781,
+          "event_hadm_null": 342,
+          "pct": 0.009
+        },
+        "inputevents_cv": {
+          "flagged": 4314,
+          "total": 17497482,
+          "event_hadm_null": 6270,
+          "pct": 0.025
+        },
+        "prescriptions": {
+          "flagged": 607,
+          "total": 2708742,
+          "event_hadm_null": 0,
+          "pct": 0.022
+        }
+      }
+    },
+    {
+      "id": "group.negative_duration",
+      "rule": "Some end times precede their start times: admissions (dischtime < admittime), admissions (edouttime < edregtime), prescriptions (enddate < startdate), procedureevents_mv (endtime < starttime). Exclude those rows when computing durations or lengths of stay; keep them for counts.",
+      "targets": [
+        "admissions (dischtime < admittime)",
+        "admissions (edouttime < edregtime)",
+        "prescriptions (enddate < startdate)",
+        "procedureevents_mv (endtime < starttime)"
+      ],
+      "applies_to": [
+        "admissions.admittime",
+        "admissions.dischtime",
+        "admissions.edregtime",
+        "admissions.edouttime",
+        "prescriptions.startdate",
+        "prescriptions.enddate",
+        "procedureevents_mv.starttime",
+        "procedureevents_mv.endtime"
+      ],
+      "sources": [
+        "temporal.admissions.dischtime_before_admittime",
+        "temporal.admissions.edouttime_before_edregtime",
+        "temporal.prescriptions.enddate_before_startdate",
+        "temporal.procedureevents_mv.endtime_before_starttime"
+      ],
+      "evidence": {
+        "admissions (dischtime < admittime)": {
+          "flagged": 98,
+          "total": 58976,
+          "within_24h": 98,
+          "died_in_hospital": 80,
+          "pct": 0.166
+        },
+        "admissions (edouttime < edregtime)": {
+          "flagged": 17,
+          "total": 30877,
+          "within_24h": 16,
+          "died_in_hospital": "<11",
+          "pct": 0.055
+        },
+        "prescriptions (enddate < startdate)": {
+          "flagged": 15922,
+          "total": 4150832,
+          "within_24h": 11154,
+          "pct": 0.384
+        },
+        "procedureevents_mv (endtime < starttime)": {
+          "flagged": 62,
+          "total": 258066,
+          "within_24h": 62,
+          "pct": 0.024
+        }
+      }
+    },
+    {
+      "id": "group.outside_admission",
+      "rule": "Some events are timed slightly outside [admittime, dischtime] of their own admission, mostly within 24 h (e.g. ED time before admission): callout.createtime, datetimeevents.charttime, inputevents_cv.charttime, microbiologyevents.chartdate, prescriptions.startdate, procedureevents_mv.starttime, services.transfertime, transfers.intime, icustays.intime. Link events to admissions by hadm_id, not by time overlap (a time-window filter would drop them); apply a time filter only when the question asks for one (e.g. 'first 24 hours').",
+      "targets": [
+        "callout.createtime",
+        "datetimeevents.charttime",
+        "inputevents_cv.charttime",
+        "microbiologyevents.chartdate",
+        "prescriptions.startdate",
+        "procedureevents_mv.starttime",
+        "services.transfertime",
+        "transfers.intime",
+        "icustays.intime"
+      ],
+      "applies_to": [
+        "callout.createtime",
+        "datetimeevents.charttime",
+        "inputevents_cv.charttime",
+        "microbiologyevents.chartdate",
+        "prescriptions.startdate",
+        "procedureevents_mv.starttime",
+        "services.transfertime",
+        "transfers.intime",
+        "icustays.intime"
+      ],
+      "sources": [
+        "temporal.callout.createtime_outside_admission",
+        "temporal.datetimeevents.charttime_outside_admission",
+        "temporal.inputevents_cv.charttime_outside_admission",
+        "temporal.microbiologyevents.chartdate_outside_admission",
+        "temporal.prescriptions.startdate_outside_admission",
+        "temporal.procedureevents_mv.starttime_outside_admission",
+        "temporal.services.transfertime_outside_admission",
+        "temporal.transfers.intime_outside_admission",
+        "temporal.icustays.intime_outside_admission"
+      ],
+      "evidence": {
+        "callout.createtime": {
+          "flagged": 36,
+          "total": 34499,
+          "beyond_24h": 0,
+          "pct": 0.104
+        },
+        "datetimeevents.charttime": {
+          "flagged": 11046,
+          "total": 4484165,
+          "beyond_24h": 377,
+          "pct": 0.246
+        },
+        "inputevents_cv.charttime": {
+          "flagged": 43596,
+          "total": 17505266,
+          "beyond_24h": 0,
+          "pct": 0.249
+        },
+        "microbiologyevents.chartdate": {
+          "flagged": 1655,
+          "total": 631726,
+          "beyond_24h": 604,
+          "pct": 0.262
+        },
+        "prescriptions.startdate": {
+          "flagged": 4897,
+          "total": 4153268,
+          "beyond_24h": 2378,
+          "pct": 0.118
+        },
+        "procedureevents_mv.starttime": {
+          "flagged": 1049,
+          "total": 258066,
+          "beyond_24h": 52,
+          "pct": 0.406
+        },
+        "services.transfertime": {
+          "flagged": 6898,
+          "total": 73343,
+          "beyond_24h": 53,
+          "pct": 9.405
+        },
+        "transfers.intime": {
+          "flagged": 57849,
+          "total": 261873,
+          "beyond_24h": 432,
+          "pct": 22.09
+        },
+        "icustays.intime": {
+          "flagged": 585,
+          "total": 61532,
+          "beyond_24h": "<11",
+          "pct": 0.951
+        }
+      }
+    },
+    {
+      "id": "temporal.admissions.deathtime_outside_stay",
+      "rule": "Identify in-hospital death with admissions.hospital_expire_flag = 1, not by testing deathtime against the admission window.",
+      "targets": [],
+      "applies_to": [
+        "admissions.deathtime",
+        "admissions.hospital_expire_flag"
+      ],
+      "sources": [
+        "temporal.admissions.deathtime_outside_stay"
+      ],
+      "evidence": {
+        "temporal.admissions.deathtime_outside_stay": {
+          "flagged": 126,
+          "total": 5854,
+          "beyond_24h": 13,
+          "pct": 2.152
+        }
+      }
+    },
+    {
+      "id": "temporal.patients.age_over_89_shifted",
+      "rule": "Patients older than 89 at their first admission have DOB shifted so that computed age is about 300 years. For age questions treat computed age > 89 as '>89' (cap, or exclude); never average raw computed ages. MIMIC documents the median true age of this group as 91.4.",
+      "targets": [],
+      "applies_to": [
+        "patients.dob"
+      ],
+      "sources": [
+        "temporal.patients.age_over_89_shifted"
+      ],
+      "evidence": {
+        "temporal.patients.age_over_89_shifted": {
+          "flagged": 1991,
+          "total": 46520,
+          "shifted_about_300": 1991,
+          "under_1_year": 7874,
+          "pct": 4.28
+        }
+      }
+    },
+    {
+      "id": "group.icd9_format",
+      "rule": "ICD-9 codes are stored as text without the decimal point ('4019' is 401.9; E and V codes keep their letter) in diagnoses_icd.icd9_code, procedures_icd.icd9_code, d_icd_diagnoses.icd9_code, d_icd_procedures.icd9_code. Compare as strings; never cast to numbers.",
+      "targets": [
+        "diagnoses_icd.icd9_code",
+        "procedures_icd.icd9_code",
+        "d_icd_diagnoses.icd9_code",
+        "d_icd_procedures.icd9_code"
+      ],
+      "applies_to": [
+        "diagnoses_icd.icd9_code",
+        "procedures_icd.icd9_code",
+        "d_icd_diagnoses.icd9_code",
+        "d_icd_procedures.icd9_code"
+      ],
+      "sources": [
+        "quirk.diagnoses_icd.icd9_without_dot",
+        "quirk.procedures_icd.icd9_without_dot",
+        "quirk.d_icd_diagnoses.icd9_without_dot",
+        "quirk.d_icd_procedures.icd9_without_dot"
+      ],
+      "evidence": {
+        "diagnoses_icd.icd9_code": {
+          "flagged": 0,
+          "total": 651000,
+          "pct": 0.0
+        },
+        "procedures_icd.icd9_code": {
+          "flagged": 0,
+          "total": 240095,
+          "pct": 0.0
+        },
+        "d_icd_diagnoses.icd9_code": {
+          "flagged": 0,
+          "total": 14567,
+          "pct": 0.0
+        },
+        "d_icd_procedures.icd9_code": {
+          "flagged": 0,
+          "total": 3882,
+          "pct": 0.0
+        }
+      }
+    },
+    {
+      "id": "quirk.icustays.without_inputevents",
+      "rule": "ICU input (fluid/drug administration) data cover CareVue stays only (INPUTEVENTS_CV, 2001-2008); INPUTEVENTS_MV is not loaded, so input questions about MetaVision stays (2008-2012) cannot be answered and population-level input statistics are partial.",
+      "targets": [],
+      "applies_to": [
+        "inputevents_cv.*"
+      ],
+      "sources": [
+        "quirk.icustays.without_inputevents"
+      ],
+      "evidence": {
+        "quirk.icustays.without_inputevents": {
+          "flagged": 27733,
+          "total": 61532,
+          "metavision_without": 23611,
+          "carevue_without": 4081,
+          "pct": 45.071
+        }
+      }
+    },
+    {
+      "id": "group.dbsource_crossover",
+      "rule": "icustays.dbsource does not exactly partition the ICU event tables: inputevents_cv rows on 'metavision' stays, procedureevents_mv rows on 'carevue' stays. Find a stay's events by querying the event table on icustay_id; never choose the table from icustays.dbsource.",
+      "targets": [
+        "inputevents_cv rows on 'metavision' stays",
+        "procedureevents_mv rows on 'carevue' stays"
+      ],
+      "applies_to": [
+        "icustays.dbsource",
+        "inputevents_cv.icustay_id",
+        "procedureevents_mv.icustay_id"
+      ],
+      "sources": [
+        "quirk.inputevents_cv.on_metavision_stays",
+        "quirk.procedureevents_mv.on_carevue_stays"
+      ],
+      "evidence": {
+        "inputevents_cv rows on 'metavision' stays": {
+          "flagged": 1709,
+          "total": 17497482,
+          "stays_affected": "<11",
+          "pct": 0.01
+        },
+        "procedureevents_mv rows on 'carevue' stays": {
+          "flagged": 381,
+          "total": 257978,
+          "stays_affected": 23,
+          "pct": 0.148
+        }
+      }
+    },
+    {
+      "id": "quirk.icustays.without_procedureevents",
+      "rule": "PROCEDUREEVENTS_MV covers MetaVision ICU stays only (2008-2012); CareVue stays have no ICU procedure events. Use PROCEDURES_ICD for hospital procedures across all years.",
+      "targets": [],
+      "applies_to": [
+        "procedureevents_mv.*"
+      ],
+      "sources": [
+        "quirk.icustays.without_procedureevents"
+      ],
+      "evidence": {
+        "quirk.icustays.without_procedureevents": {
+          "flagged": 38131,
+          "total": 61532,
+          "carevue_without": 37753,
+          "pct": 61.969
+        }
+      }
+    },
+    {
+      "id": "quirk.cptevents.without_icu_stay",
+      "rule": "CPTEVENTS records billed professional services (mostly ICU); it is not a complete record of procedures. Use PROCEDURES_ICD for 'which procedures did the patient have'.",
+      "targets": [],
+      "applies_to": [
+        "cptevents.*"
+      ],
+      "sources": [
+        "quirk.cptevents.without_icu_stay"
+      ],
+      "evidence": {
+        "quirk.cptevents.without_icu_stay": {
+          "flagged": 2499,
+          "total": 573146,
+          "pct": 0.436
+        }
+      }
+    },
+    {
+      "id": "quirk.prescriptions.ndc_unusable",
+      "rule": "Many prescriptions have no usable NDC: find drugs by name (drug, drug_name_generic; case-insensitive, e.g. lower(drug) LIKE '%heparin%') rather than by NDC.",
+      "targets": [],
+      "applies_to": [
+        "prescriptions.ndc",
+        "prescriptions.drug"
+      ],
+      "sources": [
+        "quirk.prescriptions.ndc_unusable"
+      ],
+      "evidence": {
+        "quirk.prescriptions.ndc_unusable": {
+          "flagged": 591049,
+          "total": 4156450,
+          "pct": 14.22
+        }
+      }
+    },
+    {
+      "id": "quirk.datetimeevents.error_rows",
+      "rule": "Exclude datetimeevents rows with error = 1 (charted in error).",
+      "targets": [],
+      "applies_to": [
+        "datetimeevents.error"
+      ],
+      "sources": [
+        "quirk.datetimeevents.error_rows"
+      ],
+      "evidence": {
+        "quirk.datetimeevents.error_rows": {
+          "flagged": 595,
+          "total": 4485937,
+          "pct": 0.013
+        }
+      }
+    },
+    {
+      "id": "quirk.procedureevents_mv.rewritten",
+      "rule": "Exclude procedureevents_mv rows with statusdescription = 'Rewritten' (replaced by a later entry) when counting procedures.",
+      "targets": [],
+      "applies_to": [
+        "procedureevents_mv.statusdescription"
+      ],
+      "sources": [
+        "quirk.procedureevents_mv.rewritten"
+      ],
+      "evidence": {
+        "quirk.procedureevents_mv.rewritten": {
+          "flagged": 8590,
+          "total": 258066,
+          "pct": 3.329
+        }
+      }
+    },
+    {
+      "id": "quirk.microbiologyevents.date_only",
+      "rule": "Microbiology charttime is often missing: use chartdate for microbiology timing.",
+      "targets": [],
+      "applies_to": [
+        "microbiologyevents.charttime",
+        "microbiologyevents.chartdate"
+      ],
+      "sources": [
+        "quirk.microbiologyevents.date_only"
+      ],
+      "evidence": {
+        "quirk.microbiologyevents.date_only": {
+          "flagged": 41772,
+          "total": 631726,
+          "pct": 6.612
+        }
+      }
+    },
+    {
+      "id": "quirk.microbiologyevents.no_organism",
+      "rule": "Microbiology rows with org_name IS NULL record specimens without a grown organism; count positive cultures with org_name IS NOT NULL.",
+      "targets": [],
+      "applies_to": [
+        "microbiologyevents.org_name"
+      ],
+      "sources": [
+        "quirk.microbiologyevents.no_organism"
+      ],
+      "evidence": {
+        "quirk.microbiologyevents.no_organism": {
+          "flagged": 303710,
+          "total": 631726,
+          "pct": 48.076
+        }
+      }
+    },
+    {
+      "id": "dist.icustays.dbsource",
+      "rule": "ICU data come from two systems: CareVue (2001-2008) and MetaVision (2008-2012); item IDs and event tables differ between them (dbsource).",
+      "targets": [],
+      "applies_to": [
+        "icustays.dbsource"
+      ],
+      "sources": [
+        "dist.icustays.dbsource"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "dist.admissions.admission_type",
+      "rule": "admission_type = 'NEWBORN' marks neonatal admissions (age about 0); exclude them for adult cohort questions unless newborns are asked about.",
+      "targets": [],
+      "applies_to": [
+        "admissions.admission_type"
+      ],
+      "sources": [
+        "dist.admissions.admission_type"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "dist.drgcodes.drg_type",
+      "rule": "DRGCODES mixes DRG systems (drg_type HCFA, MS, APR): filter by drg_type before comparing codes.",
+      "targets": [],
+      "applies_to": [
+        "drgcodes.drg_type"
+      ],
+      "sources": [
+        "dist.drgcodes.drg_type"
+      ],
+      "evidence": {}
+    },
+    {
+      "id": "group.padded_text",
+      "rule": "Some text values have leading or trailing spaces, so an exact match fails (every APR row has drg_type 'APR ', so drg_type = 'APR' finds nothing): admissions.diagnosis, d_items.label, d_items.abbreviation, drgcodes.drg_type, microbiologyevents.org_name, prescriptions.drug, prescriptions.drug_name_poe, prescriptions.drug_name_generic, prescriptions.gsn, prescriptions.prod_strength, prescriptions.dose_val_rx, prescriptions.form_val_disp, procedureevents_mv.location. Compare with trim(column) = 'value', or use LIKE / ILIKE patterns.",
+      "targets": [
+        "admissions.diagnosis",
+        "d_items.label",
+        "d_items.abbreviation",
+        "drgcodes.drg_type",
+        "microbiologyevents.org_name",
+        "prescriptions.drug",
+        "prescriptions.drug_name_poe",
+        "prescriptions.drug_name_generic",
+        "prescriptions.gsn",
+        "prescriptions.prod_strength",
+        "prescriptions.dose_val_rx",
+        "prescriptions.form_val_disp",
+        "procedureevents_mv.location"
+      ],
+      "applies_to": [
+        "admissions.diagnosis",
+        "d_items.label",
+        "d_items.abbreviation",
+        "drgcodes.drg_type",
+        "microbiologyevents.org_name",
+        "prescriptions.drug",
+        "prescriptions.drug_name_poe",
+        "prescriptions.drug_name_generic",
+        "prescriptions.gsn",
+        "prescriptions.prod_strength",
+        "prescriptions.dose_val_rx",
+        "prescriptions.form_val_disp",
+        "procedureevents_mv.location"
+      ],
+      "sources": [
+        "padded_text.admissions.diagnosis",
+        "padded_text.d_items.label",
+        "padded_text.d_items.abbreviation",
+        "padded_text.drgcodes.drg_type",
+        "padded_text.microbiologyevents.org_name",
+        "padded_text.prescriptions.drug",
+        "padded_text.prescriptions.drug_name_poe",
+        "padded_text.prescriptions.drug_name_generic",
+        "padded_text.prescriptions.gsn",
+        "padded_text.prescriptions.prod_strength",
+        "padded_text.prescriptions.dose_val_rx",
+        "padded_text.prescriptions.form_val_disp",
+        "padded_text.procedureevents_mv.location"
+      ],
+      "evidence": {
+        "admissions.diagnosis": {
+          "values_with_spaces": 460
+        },
+        "d_items.label": {
+          "values_with_spaces": "<11"
+        },
+        "d_items.abbreviation": {
+          "values_with_spaces": "<11"
+        },
+        "drgcodes.drg_type": {
+          "values_with_spaces": 66634
+        },
+        "microbiologyevents.org_name": {
+          "values_with_spaces": 108
+        },
+        "prescriptions.drug": {
+          "values_with_spaces": 19577
+        },
+        "prescriptions.drug_name_poe": {
+          "values_with_spaces": 16651
+        },
+        "prescriptions.drug_name_generic": {
+          "values_with_spaces": 16105
+        },
+        "prescriptions.gsn": {
+          "values_with_spaces": 1125
+        },
+        "prescriptions.prod_strength": {
+          "values_with_spaces": 2783
+        },
+        "prescriptions.dose_val_rx": {
+          "values_with_spaces": 60
+        },
+        "prescriptions.form_val_disp": {
+          "values_with_spaces": "<11"
+        },
+        "procedureevents_mv.location": {
+          "values_with_spaces": 369
+        }
+      }
+    },
+    {
+      "id": "group.all_null",
+      "rule": "These columns are always null in this dataset: d_items.conceptid, datetimeevents.resultstatus, procedureevents_mv.secondaryordercategoryname. Do not filter or group on them.",
+      "targets": [
+        "d_items.conceptid",
+        "datetimeevents.resultstatus",
+        "procedureevents_mv.secondaryordercategoryname"
+      ],
+      "applies_to": [
+        "d_items.conceptid",
+        "datetimeevents.resultstatus",
+        "procedureevents_mv.secondaryordercategoryname"
+      ],
+      "sources": [
+        "missing.d_items.conceptid",
+        "missing.datetimeevents.resultstatus",
+        "missing.procedureevents_mv.secondaryordercategoryname"
+      ],
+      "evidence": {
+        "d_items.conceptid": {
+          "rows": 12487
+        },
+        "datetimeevents.resultstatus": {
+          "rows": 4485937
+        },
+        "procedureevents_mv.secondaryordercategoryname": {
+          "rows": 258066
+        }
+      }
+    }
+  ]
+}
