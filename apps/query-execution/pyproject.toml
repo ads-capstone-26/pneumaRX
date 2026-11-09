@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumarx-query-execution"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pneumarx[live]"]
+
+[project.scripts]
+pneumarx-query-execution = "pneumarx_query_execution.main:main"
+
+[tool.setuptools]
+packages = ["pneumarx_query_execution"]
+package-dir = { "pneumarx_query_execution" = "." }
+
+[tool.uv.sources]
+pneumarx = { workspace = true }

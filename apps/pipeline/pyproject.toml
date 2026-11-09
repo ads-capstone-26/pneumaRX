@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumarx-pipeline"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pneumarx", "pneumarx-intent-understanding", "pneumarx-query-execution", "pneumarx-result-validation"]
+
+[project.scripts]
+pneumarx-pipeline = "pneumarx_pipeline.main:main"
+
+[tool.setuptools]
+packages = ["pneumarx_pipeline"]
+package-dir = { "pneumarx_pipeline" = "." }
+
+[tool.uv.sources]
+pneumarx = { workspace = true }
+pneumarx-intent-understanding = { workspace = true }
+pneumarx-query-execution = { workspace = true }
+pneumarx-result-validation = { workspace = true }

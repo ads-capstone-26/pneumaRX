@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumarx"
+version = "0.1.0"
+description = "Modular MIMIC data preparation and clinical query workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "duckdb>=1.4.2,<2", "pandas>=2.2.3,<3", "pydantic>=2.10,<3",
+  "httpx>=0.27,<1", "python-dotenv>=1,<2",
+]
+
+[project.optional-dependencies]
+live = ["openai>=2.7.2,<3"]
+
+[dependency-groups]
+dev = ["pneumarx-data-processing", "pneumarx-intent-understanding", "pneumarx-query-execution", "pneumarx-result-validation", "pneumarx-pipeline"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pneumarx*"]
+
+[tool.uv.workspace]
+members = ["apps/data-processing", "apps/intent-understanding", "apps/query-execution", "apps/result-validation", "apps/pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests_modular"]
+pythonpath = ["src"]
+norecursedirs = [".venv"]
+
+[tool.uv.sources]
+pneumarx-data-processing = { workspace = true }
+pneumarx-intent-understanding = { workspace = true }
+pneumarx-query-execution = { workspace = true }
+pneumarx-result-validation = { workspace = true }
+pneumarx-pipeline = { workspace = true }

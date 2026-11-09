@@ -1,28 +1,58 @@
-__pycache__
-.env
-*coverage*
-*pkl
-*log
-pneuma_seeker.duckdb
-temp
-*.out
-.vscode
+# Environment, credentials and build artifacts
+.env*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+/build/
+/dist/
 .DS_Store
-pneuma-seeker-ui
-.idea
-.claude
+.vscode/
+.idea/
+.claude/
+*coverage*
+*.log
+*.out
+*.pkl
+*.db
+*.duckdb
 
-# MIMIC (credentialed data, PhysioNet DUA): never commit data, derived DBs, or results
-data_src/MIMIC*/
-data_src/mimic*/
-data_src/ehrsql/
-src/pneuma_seeker/services/db/datasets/mimic*/
-eval_results/
+# Local datasets, results and archived code
+/data/
+/data_src/
+/runs/
+/temp/
+/.local_archive/
+**/local_results/
+/baselines/
+/experiments/
+/scripts/
+/src/pneuma_seeker/
+/pneuma-seeker-ui/
 
-# Local slide figures and the scripts that generate them (not tracked)
-scripts/mimic3_eda.py
-scripts/pneuma_seeker_overview.py
-scripts/pneumarx_architecture.py
-docs/figures/mimic3_overview.*
-docs/figures/pneuma_seeker_overview.*
-docs/figures/pneumarx_architecture.*
+# Tests and research tooling stay local
+/tests/
+/tests_modular/
+/test.py
+**/test_*.py
+**/*_test.py
+/apps/evaluate/
+/apps/result-validation/repair_policy.py
+/apps/**/notebooks/
+/apps/**/README.md
+/apps/**/DEVELOPMENT.md
+
+# Publish only concise documentation and runtime knowledge
+/docs/*
+!/docs/evaluation.md
+!/docs/interfaces.md
+!/docs/mimic3/
+/docs/mimic3/*
+!/docs/mimic3/mimic3_schema_profile.json
+!/docs/mimic3/mimic3_query_conventions.json
+
+# Runnable examples and portable dataset configurations
+/examples/*
+!/examples/intent_spec.json
+!/examples/datasets/

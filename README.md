@@ -1,160 +1,59 @@
-# Pneuma-Seeker
+# PneumaRX
 
-[![arXiv](https://img.shields.io/badge/arXiv-2603.10747-b31b1b?logo=arxiv)](https://arxiv.org/abs/2603.10747)
-[![Demo](https://img.shields.io/badge/YouTube-Demo%20Video-red?logo=youtube)](https://youtu.be/ZNAhTE6n0yI)
+PneumaRX 是基于 Pneuma-Seeker 的临床数据查询工作流：检索相关表 → 生成 IntentSpec → 生成并只读执行 SQL → 核查结果。默认使用 BM25 top-5 检索和 hybrid reviewer，支持 MIMIC-III 及显式配置的数据集。
 
-`Pneuma-Seeker` is an LLM-powered system for answering questions over tabular data. Given a question, it automatically finds relevant tables, combines them, and runs the necessary computations to produce an answer.
+## 安装与运行
 
-# Installation
+需要 Python 3.12+ 和 uv。在仓库根目录执行：
 
-To install and run `Pneuma-Seeker`, you need to set up both the backend and frontend.
-
-First, copy the environment configuration:
 ```bash
+uv sync --frozen --all-packages --extra live
 cp .env.example .env
 ```
-Then update values as needed. See [the configuration file](./src/pneuma_seeker/shared/config.py) for all available options.
 
-Next, clone the frontend repository:
+在 `.env` 中设置模型与 API key。离线示例使用虚构数据，不调用模型：
+
 ```bash
-git clone https://github.com/TheDataStation/pneuma-seeker-ui.git
+uv run python main.py demo --output runs/demo.json
 ```
 
-To spin up the entire system using Docker, run:
+准备本地 MIMIC-III 数据：
+
 ```bash
-docker compose up -d
-cd pneuma-seeker-ui
-docker compose up -d
+uv run python main.py data-processing all \
+  --mimic-dir /path/to/MIMIC_III \
+  --db data/mimic_iii/mimic_iii.db --output runs/preparation.json
 ```
 
-# Development
+使用已批准的数据处理端点运行真实查询：
 
-## Frontend Development
-
-For frontend development guidelines, refer to the [pneuma-seeker-ui README](./pneuma-seeker-ui/README.md).
-
-## Backend Development
-
-We recommend using `Miniconda` (see [installation guide](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)) to manage dependencies. Create and activate a new environment using:
 ```bash
-conda create --name pneuma_seeker python=3.12.12 -y
-conda activate pneuma_seeker
-pip install -r requirements.txt
+uv run python main.py run \
+  --question 'How many distinct hospital admissions are recorded?' \
+  --db data/mimic_iii/mimic_iii.db \
+  --allow-private-llm --output runs/answer.json
 ```
 
-Authentication and authorization depend on Postgres. You can spin up a local instance using Docker:
-```bash
-docker compose up postgres -d
-```
+`--model` 指定模型；`--table-top-k` 调整检索数量；`--table-retrieval all` 使用全表；`--reviewer sanity|llm|hybrid|pending` 选择复核方式。各组件的参数见 `python main.py <组件> --help`。
 
-> Note: If you have a local Postgres instance running, make sure to update the `POSTGRES_HOST` variable in your `.env` file accordingly (e.g., to `localhost`).
+## 代码结构
 
-Start the backend server:
-```bash
-cd src/pneuma_seeker
-```
-On macOS:
-```bash
-fastapi dev main.py > main.out 2>&1
-```
-Linux/other:
-```bash
-nohup fastapi dev main.py --host 0.0.0.0 --port 8000 >> main.out &
-```
+- `apps/data-processing/`：数据导入、质量检查和 schema。
+- `apps/intent-understanding/`：表检索、术语解析与 IntentSpec。
+- `apps/query-execution/`：SQL 规划、校验、只读执行及一次修复。
+- `apps/result-validation/`：证据核查和结果展示策略。
+- `apps/pipeline/`：组件编排与运行资源。
+- `src/pneumarx/`：共享配置、数据库/模型适配器和数据契约。
+- `docs/mimic3/*.json`：运行时读取的 schema 与查询规则。
 
-To run unit tests:
-```bash
-# Run from the project root
-python -m pytest tests/
-```
+面向用户的输出在 `presentation`；`execution_result` 保留原始执行证据。复核通过仅表示已执行的检查未发现矛盾，不保证答案普遍正确。接口见 [interfaces.md](docs/interfaces.md)。
 
-### Running the UI locally
-Navigate to the cloned UI repository and start the development server:
-```bash
-cd pneuma-seeker-ui
-npm run dev
-```
+## 实验结果
 
-# Datasets
+修复后的 24 题回归中，RX 正确回答 18/18，正确拒答 6/6；含复核消耗 449,401 token，比原版少 67.2%。Direct 同样全部答对且更便宜，尚无证据证明 IntentSpec 提高生成准确率。设计、口径和限制见 [实验摘要](docs/evaluation.md)。
 
-- **MIMIC-III v1.4** (credentialed clinical data): preparation, data quality checks and schema profile are
-  described in [docs/mimic3/README.md](./docs/mimic3/README.md); how the preparation package works and how
-  to set it up for another dataset in
-  [src/pneuma_seeker/services/core/data_prep/README.md](./src/pneuma_seeker/services/core/data_prep/README.md).
+本分支只交付运行代码、必要配置及简要文档。测试、评测脚本、完整过程报告、数据和运行产物留在本地，由 `.gitignore` 排除。
 
-# Next Steps
-Before asking questions on a dataset, you need to index it using the `/index` endpoint in the backend (see [indexing.py](src/pneuma_seeker/routers/indexing.py)).
+## 来源与许可
 
-For a complete walkthrough of the system, including dataset indexing and query execution, refer to [quick_start.ipynb](./quick_start.ipynb), which demonstrates how to configure Pneuma-Seeker on a sample dataset.
-
-For a deeper understanding of the system architecture, check out the [architecture overview](/docs/architecture.md) in the `/docs` directory.
-
-# Contributing
-
-We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute, report issues, and submit pull requests.
-
-# Contact
-
-For questions or support regarding `Pneuma-Seeker`, please email: pneuma-team@googlegroups.com
-
-# Citation
-
-## [Pneuma-Seeker paper](https://arxiv.org/abs/2603.10747)
-```
-@misc{PneumaSeeker2026,
-      title={Pneuma-Seeker: A Relational Reification Mechanism to Align AI Agents with Human Work over Relational Data}, 
-      author={Muhammad Imam Luthfi Balaka and John Hillesland and Kemal Badur and Raul Castro Fernandez},
-      year={2026},
-      eprint={2603.10747},
-      archivePrefix={arXiv},
-      primaryClass={cs.DB},
-      url={https://arxiv.org/abs/2603.10747}, 
-}
-```
-
-## [Pneuma-Seeker demo paper](https://dl.acm.org/doi/10.1145/3786335.3813215)
-```
-@inbook{PneumaSeekerDemo2026,
-      author = {Balaka, Muhammad Imam Luthfi and Castro Fernandez, Raul},
-      title = {Demonstration of Pneuma-Seeker: An Agentic System for Reifying and Fulfilling Information Needs on Tabular Data},
-      year = {2026},
-      isbn = {9798400724152},
-      publisher = {Association for Computing Machinery},
-      address = {New York, NY, USA},
-      url = {https://doi.org/10.1145/3786335.3813215},
-      booktitle = {Proceedings of the ACM Conference on AI and Agentic Systems},
-      pages = {1199–1203},
-      numpages = {5}
-}
-```
-
-## [The Pneuma project paper](https://www.cidrdb.org/cidr2026/papers/p31-balaka.pdf)
-```
-@inproceedings{PneumaProjectCIDR2026,
-      author    = {Muhammad Imam Luthfi Balaka and Raul Castro Fernandez},
-      title     = {The Pneuma Project: Reifying Information Needs as Relational Schemas to Automate Discovery, Guide Preparation, and Align Data with Intent},
-      booktitle = {Proceedings of the 16th Annual Conference on Innovative Data Systems Research (CIDR '26)},
-      year      = {2026},
-}
-```
-
-## [Pneuma (data discovery system) paper](https://dl.acm.org/doi/10.1145/3725337)
-```
-@article{PneumaDataDiscovery2025,
-      author = {Balaka, Muhammad Imam Luthfi and Alexander, David and Wang, Qiming and Gong, Yue and Krisnadhi, Adila and Castro Fernandez, Raul},
-      title = {Pneuma: Leveraging LLMs for Tabular Data Representation and Retrieval in an End-to-End System},
-      year = {2025},
-      issue_date = {June 2025},
-      publisher = {Association for Computing Machinery},
-      address = {New York, NY, USA},
-      volume = {3},
-      number = {3},
-      url = {https://doi.org/10.1145/3725337},
-      doi = {10.1145/3725337},
-      journal = {Proc. ACM Manag. Data},
-      month = jun,
-      articleno = {200},
-      numpages = {28},
-      keywords = {data discovery, large language models, natural-language questions}
-}
-```
+基于 [Pneuma-Seeker](https://github.com/TheDataStation/pneuma-seeker) 的组件重构和优化；原版聊天后端与基线不包含在此分支。保留原项目 MIT [LICENSE](LICENSE) 与版权声明。

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumarx-result-validation"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pneumarx"]
+
+[project.scripts]
+pneumarx-result-validation = "pneumarx_result_validation.main:main"
+
+[tool.setuptools]
+packages = ["pneumarx_result_validation"]
+package-dir = { "pneumarx_result_validation" = "." }
+
+[tool.uv.sources]
+pneumarx = { workspace = true }

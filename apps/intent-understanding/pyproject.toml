@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pneumarx-intent-understanding"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pneumarx[live]", "pneumarx-data-processing"]
+
+[project.scripts]
+pneumarx-intent-understanding = "pneumarx_intent_understanding.main:main"
+
+[tool.setuptools]
+packages = ["pneumarx_intent_understanding"]
+package-dir = { "pneumarx_intent_understanding" = "." }
+
+[tool.uv.sources]
+pneumarx = { workspace = true }
+pneumarx-data-processing = { workspace = true }

@@ -1,0 +1,317 @@
+{
+  "version": 1,
+  "dataset": "hospital",
+  "name": "Capstone synthetic hospital EHR",
+  "private": false,
+  "domain_notes": "This is the synthetic hospital EHR, not MIMIC. Use its actual identifiers,\nICD-10 codes with dots, direct drug/test names and date columns. There are no MIMIC\nICD-9 dictionaries or subject_id/hadm_id columns. Laboratory result_value is the\nmeasurement; lab_id identifies a record, not a test type. Join diagnosis to an\nencounter by admission_id when the request is encounter-specific. Do not interpret\ncreated_at as date of birth. A missing laboratory test must not be invented.\nResolve genuine ambiguity explicitly in the IntentSpec; do not treat the user's\nclinical rationale as an independently verified medical guideline.",
+  "reference_time": "2026-04-27",
+  "tables": {
+    "admissions": {
+      "description": "Hospital encounters, multiple admissions per patient.",
+      "grain": "One record per admission_id",
+      "primary_key": [
+        "admission_id"
+      ],
+      "columns": {
+        "admission_id": {
+          "type": "BIGINT",
+          "description": "Unique admission identifier"
+        },
+        "patient_id": {
+          "type": "BIGINT",
+          "description": "Patient identifier"
+        },
+        "admission_date": {
+          "type": "DATE",
+          "description": "Admission date"
+        },
+        "discharge_date": {
+          "type": "DATE",
+          "description": "Discharge date; NULL for an ongoing admission"
+        },
+        "ward": {
+          "type": "VARCHAR",
+          "description": "Hospital ward"
+        },
+        "admission_type": {
+          "type": "VARCHAR",
+          "description": "Admission type"
+        },
+        "attending_physician_id": {
+          "type": "BIGINT",
+          "description": "Attending physician identifier"
+        },
+        "drg_code": {
+          "type": "BIGINT",
+          "description": ""
+        }
+      }
+    },
+    "diagnoses": {
+      "description": "Diagnoses linking patients and optionally admissions to ICD-10 codes.",
+      "grain": "One record per diagnosis_id",
+      "primary_key": [
+        "diagnosis_id"
+      ],
+      "columns": {
+        "diagnosis_id": {
+          "type": "BIGINT",
+          "description": "Unique diagnosis record identifier"
+        },
+        "patient_id": {
+          "type": "BIGINT",
+          "description": "Patient identifier"
+        },
+        "admission_id": {
+          "type": "DOUBLE",
+          "description": "Admission identifier; can be NULL"
+        },
+        "icd10_code": {
+          "type": "VARCHAR",
+          "description": "ICD-10 code as text WITH its dot"
+        },
+        "description": {
+          "type": "VARCHAR",
+          "description": "Description of this ICD-10 diagnosis"
+        },
+        "primary_flag": {
+          "type": "BIGINT",
+          "description": "1 marks a primary diagnosis"
+        },
+        "diagnosed_date": {
+          "type": "DATE",
+          "description": "Date diagnosis was recorded"
+        }
+      }
+    },
+    "lab_results": {
+      "description": "Longitudinal laboratory measurements; multiple tests per patient.",
+      "grain": "One record per lab_id",
+      "primary_key": [
+        "lab_id"
+      ],
+      "columns": {
+        "lab_id": {
+          "type": "BIGINT",
+          "description": "Unique laboratory record identifier"
+        },
+        "patient_id": {
+          "type": "BIGINT",
+          "description": "Patient identifier"
+        },
+        "test_name": {
+          "type": "VARCHAR",
+          "description": "Laboratory test name, such as eGFR"
+        },
+        "result_value": {
+          "type": "DOUBLE",
+          "description": "Measured numeric value"
+        },
+        "unit": {
+          "type": "VARCHAR",
+          "description": "Measurement unit"
+        },
+        "reference_range": {
+          "type": "VARCHAR",
+          "description": "Recorded reference range"
+        },
+        "abnormal_flag": {
+          "type": "BIGINT",
+          "description": "1 marks an abnormal result"
+        },
+        "test_date": {
+          "type": "DATE",
+          "description": "Measurement date"
+        }
+      }
+    },
+    "medications": {
+      "description": "Medication prescriptions. A patient can have multiple records for the same drug.",
+      "grain": "One record per medication_id",
+      "primary_key": [
+        "medication_id"
+      ],
+      "columns": {
+        "medication_id": {
+          "type": "BIGINT",
+          "description": "Unique prescription record identifier"
+        },
+        "patient_id": {
+          "type": "BIGINT",
+          "description": "Patient identifier"
+        },
+        "drug_name": {
+          "type": "VARCHAR",
+          "description": "Drug name as text"
+        },
+        "dosage": {
+          "type": "VARCHAR",
+          "description": "Prescribed dosage"
+        },
+        "frequency": {
+          "type": "VARCHAR",
+          "description": "Dose frequency"
+        },
+        "start_date": {
+          "type": "DATE",
+          "description": "Prescription start date"
+        },
+        "end_date": {
+          "type": "DATE",
+          "description": "Prescription end date; NULL means no recorded end"
+        },
+        "prescribing_physician_id": {
+          "type": "BIGINT",
+          "description": "Prescribing physician identifier"
+        }
+      }
+    },
+    "patients": {
+      "description": "Patient demographics, one row per patient.",
+      "grain": "One record per patient_id",
+      "primary_key": [
+        "patient_id"
+      ],
+      "columns": {
+        "patient_id": {
+          "type": "BIGINT",
+          "description": "Unique patient identifier"
+        },
+        "age": {
+          "type": "BIGINT",
+          "description": "Age in years, already stored; do not derive it from dates"
+        },
+        "gender": {
+          "type": "VARCHAR",
+          "description": "Gender"
+        },
+        "insurance_type": {
+          "type": "VARCHAR",
+          "description": ""
+        },
+        "primary_care_physician_id": {
+          "type": "BIGINT",
+          "description": "Primary care physician identifier"
+        },
+        "zip_code": {
+          "type": "BIGINT",
+          "description": ""
+        },
+        "created_at": {
+          "type": "DATE",
+          "description": "Record creation date, not birth date"
+        }
+      }
+    },
+    "physicians": {
+      "description": "Physician reference directory.",
+      "grain": "One record per physician_id",
+      "primary_key": [
+        "physician_id"
+      ],
+      "columns": {
+        "physician_id": {
+          "type": "BIGINT",
+          "description": "Unique physician identifier"
+        },
+        "name": {
+          "type": "VARCHAR",
+          "description": "Physician name"
+        },
+        "specialty": {
+          "type": "VARCHAR",
+          "description": "Clinical specialty"
+        },
+        "department": {
+          "type": "VARCHAR",
+          "description": "Department"
+        },
+        "npi": {
+          "type": "BIGINT",
+          "description": "Provider identifier"
+        }
+      }
+    }
+  },
+  "relationships": [
+    {
+      "table": "admissions",
+      "column": "patient_id",
+      "parent_table": "patients",
+      "parent_column": "patient_id"
+    },
+    {
+      "table": "diagnoses",
+      "column": "patient_id",
+      "parent_table": "patients",
+      "parent_column": "patient_id"
+    },
+    {
+      "table": "lab_results",
+      "column": "patient_id",
+      "parent_table": "patients",
+      "parent_column": "patient_id"
+    },
+    {
+      "table": "medications",
+      "column": "patient_id",
+      "parent_table": "patients",
+      "parent_column": "patient_id"
+    },
+    {
+      "table": "diagnoses",
+      "column": "admission_id",
+      "parent_table": "admissions",
+      "parent_column": "admission_id"
+    }
+  ],
+  "conventions": [
+    {
+      "id": "hospital_active_medication",
+      "rule": "For active prescriptions at the fixed reference time, require start_date <= reference time and (end_date IS NULL OR end_date >= reference time). This indicates prescription status, not actual ingestion.",
+      "tables": [
+        "medications"
+      ]
+    },
+    {
+      "id": "hospital_encounter_patient_consistency",
+      "rule": "For encounter-specific diagnoses, require both admission_id and patient_id to match admissions. A matching admission_id alone does not establish patient consistency.",
+      "tables": [
+        "diagnoses",
+        "admissions"
+      ]
+    }
+  ],
+  "capabilities": {
+    "laboratory_results": {
+      "description": "Recorded laboratory results",
+      "tables": [
+        "lab_results"
+      ]
+    },
+    "actual_ingestion": {
+      "description": "Actual medication ingestion is not recorded",
+      "supported": false
+    }
+  },
+  "terminology": {
+    "diagnosis": {
+      "event_table": "diagnoses",
+      "code_column": "icd10_code",
+      "label_column": "description",
+      "description": "ICD-10 diagnosis, code and description in diagnoses"
+    },
+    "medication": {
+      "event_table": "medications",
+      "code_column": "drug_name",
+      "label_column": "drug_name",
+      "description": "Drug name stored directly in medications"
+    },
+    "lab": {
+      "event_table": "lab_results",
+      "code_column": "test_name",
+      "label_column": "test_name",
+      "description": "Laboratory test name stored directly in lab_results"
+    }
+  }
+}

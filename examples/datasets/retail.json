@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "dataset": "retail",
+  "name": "Retail example",
+  "private": false,
+  "tables": {
+    "customers": {
+      "description": "Customer directory",
+      "grain": "One row per customer",
+      "primary_key": [
+        "customer_code"
+      ],
+      "columns": {
+        "customer_code": {
+          "type": "VARCHAR",
+          "role": "identifier"
+        },
+        "region": {
+          "type": "VARCHAR"
+        }
+      }
+    },
+    "orders": {
+      "description": "Sales orders",
+      "grain": "One row per order",
+      "primary_key": [
+        "order_id"
+      ],
+      "columns": {
+        "order_id": {
+          "type": "BIGINT"
+        },
+        "buyer_code": {
+          "type": "VARCHAR",
+          "role": "reference"
+        },
+        "total": {
+          "type": "DOUBLE",
+          "unit": "USD"
+        }
+      }
+    }
+  },
+  "relationships": [
+    {
+      "table": "orders",
+      "column": "buyer_code",
+      "parent_table": "customers",
+      "parent_column": "customer_code"
+    }
+  ],
+  "capabilities": {
+    "order_totals": {
+      "description": "Recorded order totals",
+      "tables": [
+        "orders"
+      ]
+    },
+    "refunds": {
+      "description": "Refund events are not recorded",
+      "supported": false
+    }
+  }
+}
